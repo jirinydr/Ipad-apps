@@ -17,6 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playwrite+CZ&display=swap">
 <style>
 /* Layout: one-screen toy app — top bar, big prompt in the middle, chunky letter tiles at the bottom.
    Deliberately single light theme (calm mint ground, sunflower accent), all colors explicit. */
@@ -27,6 +28,8 @@
   --guide:#D3E5E1;
   --font-letter:"Andika","Trebuchet MS",system-ui,sans-serif;
   --font-ui:"Baloo 2","Andika",system-ui,sans-serif;
+  --font-cursive:"Playwrite CZ","Snell Roundhand","Apple Chancery",cursive;
+  --tile:clamp(70px,min(20vw,15.5vh),170px);
   color-scheme:light;
 }
 html{box-sizing:border-box;height:100%}
@@ -71,18 +74,24 @@ button:focus-visible{outline:4px solid var(--t4);outline-offset:4px}
 .dot.now{border-color:var(--sun);transform:scale(1.25)}
 .hint{text-align:center;font-family:var(--font-letter);font-weight:700;color:var(--muted);font-size:clamp(20px,3.2vmin,30px);margin:4px 0 0}
 .prompt{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding-block:10px}
-.bigcard{width:clamp(170px,min(40vw,36vh),340px);aspect-ratio:1;max-width:100%;background:var(--surface);border-radius:40px;
+.bigcard{width:clamp(140px,min(36vw,29vh),290px);aspect-ratio:1;max-width:100%;background:var(--surface);border-radius:40px;
   display:grid;place-items:center;box-shadow:0 8px 0 var(--line)}
-.bigletter{font-family:var(--font-letter);font-weight:700;font-size:clamp(120px,min(30vw,27vh),260px);line-height:1}
+.bigletter{font-family:var(--font-letter);font-weight:700;font-size:clamp(100px,min(27vw,22vh),220px);line-height:1}
+.bigletter.cursive{font-family:var(--font-cursive);font-weight:400;font-size:clamp(60px,min(16vw,13vh),130px);line-height:1.5}
+.bigcard.drag{cursor:grab;touch-action:none;box-shadow:0 8px 0 var(--t3);outline:4px dashed var(--t3);outline-offset:8px}
+.bigcard.lifted{opacity:.35}
+.ghost{position:fixed;z-index:20;pointer-events:none;transform:scale(1.08) rotate(-3deg);box-shadow:0 18px 30px rgba(34,57,74,.25)}
+.opt.target{transform:scale(1.08);box-shadow:0 0 0 6px var(--t3),0 9px 0 var(--c)}
 .listen{width:clamp(150px,min(34vw,30vh),280px);aspect-ratio:1;border-radius:50%;border:0;background:var(--surface);
   box-shadow:0 8px 0 var(--line);display:grid;place-items:center}
 .listen svg{width:48%;height:48%}
 .listen.talking svg{animation:wave 1s ease-in-out infinite}
-.options{display:flex;justify-content:center;flex-wrap:wrap;gap:clamp(14px,3vw,34px);padding-block:12px clamp(20px,4vh,40px)}
-.opt{--c:var(--t1);width:clamp(104px,min(21vw,22vh),210px);aspect-ratio:1;border:0;border-radius:30px;background:var(--surface);
-  box-shadow:0 9px 0 var(--c);font-family:var(--font-letter);font-weight:700;font-size:clamp(68px,min(14vw,15vh),150px);line-height:1;
+.options{display:grid;grid-template-columns:repeat(4,var(--tile));justify-content:center;gap:clamp(10px,2.2vw,24px) clamp(10px,2.4vw,28px);padding-block:10px clamp(18px,3.5vh,36px)}
+.opt{--c:var(--t1);width:var(--tile);aspect-ratio:1;border:0;border-radius:24px;background:var(--surface);
+  box-shadow:0 8px 0 var(--c);font-family:var(--font-letter);font-weight:700;font-size:calc(var(--tile)*.64);line-height:1;padding:0;
   display:grid;place-items:center;transition:transform .08s,box-shadow .08s,opacity .2s}
 .opt:active{transform:translateY(6px);box-shadow:0 3px 0 var(--c)}
+.opt.cursive{font-family:var(--font-cursive);font-weight:400;font-size:calc(var(--tile)*.36);line-height:1.6}
 .opt.right{background:var(--ok-soft);box-shadow:0 9px 0 var(--ok);animation:pop .5s ease}
 .opt.show{background:var(--ok-soft);box-shadow:0 0 0 7px var(--ok),0 9px 0 var(--ok);animation:pulse .9s ease-in-out 2}
 .opt.wrong{opacity:.5;animation:shake .4s ease}
@@ -222,6 +231,7 @@ input[type=range]{width:200px;accent-color:var(--t2)}
             <label><input type="checkbox" id="actTap"> Ťukni na písmeno</label>
             <label><input type="checkbox" id="actHear"> Poslouchej a najdi</label>
             <label><input type="checkbox" id="actTrace"> Obtahování</label>
+            <label><input type="checkbox" id="actMatch"> Psací a tiskací</label>
           </div>
         </div>
         <div class="field"><div>Písmena</div>
@@ -234,7 +244,7 @@ input[type=range]{width:200px;accent-color:var(--t2)}
         <div class="field"><div>Písmen ve hře<small>Další se přidávají samy, když se daří.</small></div>
           <div class="step"><button id="unlMinus" aria-label="Méně písmen">−</button><output id="unlOut"></output><button id="unlPlus" aria-label="Více písmen">+</button></div>
         </div>
-        <div class="field"><div>Možností najednou<small>Upravuje se samo podle úspěšnosti.</small></div>
+        <div class="field"><div>Písmen na výběr<small>Kolik dlaždic s písmeny se ukáže (2–8).</small></div>
           <div class="step"><button id="chMinus" aria-label="Méně možností">−</button><output id="chOut"></output><button id="chPlus" aria-label="Více možností">+</button></div>
         </div>
         <div class="field"><div>Rychlost hlasu</div>
@@ -272,13 +282,14 @@ const LETTERS=[
 const PRAISE=['Výborně!','Super!','Šikulka!','Paráda!','Skvělé!','To je ono!','Moc hezky!'];
 const ROUND=10;
 const KEY='pismenka-v1';
-const DEF={unlocked:3,choices:2,rounds:0,stats:{},settings:{tap:true,hear:true,trace:true,letterCase:'both',rate:0.85}};
+const DEF={v:2,unlocked:3,choices:8,rounds:0,stats:{},settings:{tap:true,hear:true,trace:true,match:true,letterCase:'both',rate:0.85}};
 
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||null}catch(e){return null}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 let S=Object.assign({},DEF,load()||{});
 S.settings=Object.assign({},DEF.settings,S.settings||{});
 S.stats=S.stats||{};
+if(!S.v||S.v<2){S.choices=8;S.settings.match=true;S.v=2;save()}
 function stat(u){return S.stats[u]||(S.stats[u]={ok:0,bad:0,tr:0})}
 
 const $=s=>document.querySelector(s);
@@ -366,7 +377,7 @@ function pickTarget(prev){
 }
 function isLower(){const c=S.settings.letterCase;return c==='lower'?true:c==='upper'?false:Math.random()<.5}
 function makeRound(){
-  let acts=['tap','hear','trace'].filter(a=>S.settings[a]);if(!acts.length)acts=['tap'];
+  let acts=['tap','hear','match','trace'].filter(a=>S.settings[a]);if(!acts.length)acts=['tap'];
   const pick=acts.filter(a=>a!=='trace');
   const tasks=[];let prev=null;
   for(let i=0;i<ROUND;i++){
@@ -375,7 +386,7 @@ function makeRound(){
     else if(acts.includes('trace')&&(i===4||i===9))act='trace';
     else act=pick[rnd(pick.length)];
     const L=pickTarget(prev);prev=L;
-    const t={act,L,lower:isLower()};
+    const t={act,L,lower:isLower(),flip:Math.random()<.5};
     if(act!=='trace'){
       const n=Math.min(S.choices,LETTERS.length);
       let others=shuffle(pool().filter(x=>x.u!==L.u));
@@ -395,6 +406,7 @@ function promptText(t){
   const n=t.L.name;
   if(t.act==='tap')return 'Najdi písmeno '+n+'.';
   if(t.act==='hear')return 'Najdi písmeno '+n+', jako '+t.L.word+'.';
+  if(t.act==='match')return t.flip?'Spoj tiskací a psací písmeno '+n+'.':'Spoj psací a tiskací písmeno '+n+'.';
   return 'Obtáhni písmeno '+n+'.';
 }
 function speakPrompt(){
@@ -411,6 +423,11 @@ function renderTask(){
     $('#hint').textContent='Najdi stejné písmeno';
     pr.innerHTML='<div class="bigcard"><span class="bigletter"></span></div>';
     pr.querySelector('.bigletter').textContent=ch;
+  }else if(t.act==='match'){
+    $('#hint').textContent=t.flip?'Přetáhni písmeno na stejné psací':'Přetáhni psací písmeno na stejné tiskací';
+    pr.innerHTML='<div class="bigcard drag" id="dragCard"><span class="bigletter"></span></div>';
+    const bl=pr.querySelector('.bigletter');bl.textContent=ch;if(!t.flip)bl.classList.add('cursive');
+    makeDraggable($('#dragCard'));
   }else if(t.act==='hear'){
     $('#hint').textContent='Poslouchej a najdi písmeno';
     pr.innerHTML='<button class="listen" id="listenBtn" aria-label="Poslechnout znovu"><svg viewBox="0 0 24 24" fill="none" stroke="#22394A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="#F5B53F"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg></button>';
@@ -421,9 +438,10 @@ function renderTask(){
     requestAnimationFrame(()=>setupTrace(ch));
   }
   if(t.opts){
+    op.style.gridTemplateColumns='repeat('+Math.min(t.opts.length,4)+',var(--tile))';
     t.opts.forEach((L,k)=>{
-      const b=document.createElement('button');b.className='opt';b.dataset.u=L.u;
-      b.style.setProperty('--c','var(--t'+(k+1)+')');b.textContent=t.lower?L.l:L.u;
+      const b=document.createElement('button');b.className='opt'+(t.act==='match'&&t.flip?' cursive':'');b.dataset.u=L.u;
+      b.style.setProperty('--c','var(--t'+(k%4+1)+')');b.textContent=t.lower?L.l:L.u;
       b.setAttribute('aria-label','Písmeno '+L.name);
       b.onclick=()=>answer(b,L);op.append(b);
     });
@@ -448,15 +466,36 @@ function answer(btn,L){
 function next(){R.i++;if(R.i>=R.tasks.length)endRound();else renderTask()}
 function endRound(){
   const acc=R.scored?R.firstOk/R.scored:1;S.rounds++;let newL=null;
-  if(acc>=0.8){
-    if(S.choices<4)S.choices++;
-    else if(S.unlocked<LETTERS.length){S.unlocked++;newL=LETTERS[S.unlocked-1];S.choices=3}
-  }else if(acc<0.5&&S.choices>2)S.choices--;
+  if(acc>=0.8&&S.unlocked<LETTERS.length){S.unlocked++;newL=LETTERS[S.unlocked-1]}
   S.lastAcc=acc;save();
   show('end');dots();
   const nl=$('#newLetter');nl.hidden=!newL;if(newL)$('#newLetterCh').textContent=newL.u+newL.l;
   for(let i=0;i<5;i++)setTimeout(()=>burst(innerWidth*(.15+.175*i),innerHeight*.35,40),i*160);
   say('Hotovo! Výborně.').then(()=>{if(newL&&!$('#end').hidden)say('Nové písmenko: '+newL.name+', jako '+newL.word+'.')});
+}
+
+/* ---------- Drag (psací ↔ tiskací) ---------- */
+function makeDraggable(card){
+  let g=null,dx=0,dy=0,over=null;
+  const tileAt=(x,y)=>{const el=document.elementFromPoint(x,y);return el?el.closest('.opt'):null};
+  card.onpointerdown=e=>{
+    if(R.locked)return;e.preventDefault();card.setPointerCapture(e.pointerId);
+    const r=card.getBoundingClientRect();dx=e.clientX-r.left;dy=e.clientY-r.top;
+    g=card.cloneNode(true);g.removeAttribute('id');g.classList.add('ghost');
+    Object.assign(g.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
+    document.body.append(g);card.classList.add('lifted');
+  };
+  card.onpointermove=e=>{
+    if(!g)return;g.style.left=(e.clientX-dx)+'px';g.style.top=(e.clientY-dy)+'px';
+    const t=tileAt(e.clientX,e.clientY);if(t!==over){if(over)over.classList.remove('target');over=t;if(over)over.classList.add('target')}
+  };
+  const drop=e=>{
+    if(!g)return;g.remove();g=null;card.classList.remove('lifted');
+    if(over)over.classList.remove('target');
+    const t=e.type==='pointerup'?tileAt(e.clientX,e.clientY):null;over=null;
+    if(t){const L=LETTERS.find(x=>x.u===t.dataset.u);if(L)answer(t,L)}
+  };
+  card.onpointerup=drop;card.onpointercancel=drop;
 }
 
 /* ---------- Tracing ---------- */
@@ -517,21 +556,21 @@ function renderPanel(){
     el.innerHTML='<div class="top"><span class="ch">'+L.u+L.l+'</span><span class="n">'+(n?s.ok+'/'+n:'')+'</span></div><div class="bar"><i style="width:'+pct+'%"></i></div><span class="tag '+cls+'">'+lab+'</span>'+(s.tr?'<span class="n">obtaženo '+s.tr+'×</span>':'');
     g.append(el);
   });
-  $('#actTap').checked=S.settings.tap;$('#actHear').checked=S.settings.hear;$('#actTrace').checked=S.settings.trace;
+  $('#actTap').checked=S.settings.tap;$('#actHear').checked=S.settings.hear;$('#actTrace').checked=S.settings.trace;$('#actMatch').checked=S.settings.match;
   $('#case'+{upper:'Upper',lower:'Lower',both:'Both'}[S.settings.letterCase]).checked=true;
   $('#unlOut').textContent=S.unlocked;$('#chOut').textContent=S.choices;$('#rate').value=S.settings.rate;
   updateVoiceUI();resetArm(false);
 }
 function openParent(){renderPanel();$('#panel').hidden=false}
 $('#closePanel').onclick=()=>{$('#panel').hidden=true;renderHome()};
-[['actTap','tap'],['actHear','hear'],['actTrace','trace']].forEach(([id,k])=>{
-  $('#'+id).onchange=e=>{S.settings[k]=e.target.checked;if(!S.settings.tap&&!S.settings.hear&&!S.settings.trace){S.settings.tap=true;$('#actTap').checked=true}save()};
+[['actTap','tap'],['actHear','hear'],['actTrace','trace'],['actMatch','match']].forEach(([id,k])=>{
+  $('#'+id).onchange=e=>{S.settings[k]=e.target.checked;if(!S.settings.tap&&!S.settings.hear&&!S.settings.trace&&!S.settings.match){S.settings.tap=true;$('#actTap').checked=true}save()};
 });
 document.querySelectorAll('input[name=lcase]').forEach(r=>r.onchange=e=>{S.settings.letterCase=e.target.value;save()});
 $('#unlMinus').onclick=()=>{S.unlocked=Math.max(2,S.unlocked-1);save();renderPanel()};
 $('#unlPlus').onclick=()=>{S.unlocked=Math.min(LETTERS.length,S.unlocked+1);save();renderPanel()};
 $('#chMinus').onclick=()=>{S.choices=Math.max(2,S.choices-1);save();renderPanel()};
-$('#chPlus').onclick=()=>{S.choices=Math.min(4,S.choices+1);save();renderPanel()};
+$('#chPlus').onclick=()=>{S.choices=Math.min(8,S.choices+1);save();renderPanel()};
 $('#rate').oninput=e=>{S.settings.rate=parseFloat(e.target.value);save()};
 $('#testVoice').onclick=()=>{pickVoice();say('A, jako auto. Výborně!')};
 let armed=false;
