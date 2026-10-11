@@ -543,8 +543,15 @@ function dot(p){const c=T.dc;c.beginPath();c.arc(p[0],p[1],c.lineWidth/2,0,Math.
 function check(){
   if(!T||T.done||!T.pts.length)return;
   const w=T.size*dpr,data=T.dc.getImageData(0,0,w,w).data;let hit=0;
-  for(const [x,y] of T.pts){const px=Math.round(x*dpr),py=Math.round(y*dpr);if(data[(py*w+px)*4+3]>40)hit++}
-  if(hit/T.pts.length>=0.72){
+  // Every part of the letter must be traced: split it into an 8×8 grid and check each piece separately.
+  const G=8,cell={};
+  for(const [x,y] of T.pts){
+    const px=Math.round(x*dpr),py=Math.round(y*dpr),on=data[(py*w+px)*4+3]>40;if(on)hit++;
+    const k=Math.floor(x/T.size*G)+','+Math.floor(y/T.size*G),c=cell[k]||(cell[k]={n:0,h:0});c.n++;if(on)c.h++;
+  }
+  const parts=Object.values(cell).filter(c=>c.n>=4);
+  const allParts=parts.every(c=>c.h/c.n>=0.55);
+  if(hit/T.pts.length>=0.82&&allParts){
     T.done=true;stat(R.tasks[R.i].L.u).tr++;save();
     burstEl($('#traceWrap'),70);say(PRAISE[rnd(PRAISE.length)]);setTimeout(next,1700);
   }
