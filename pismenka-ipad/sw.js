@@ -1,6 +1,6 @@
 // Offline: aplikace se uloží do iPadu a funguje i bez internetu.
 // Stránka se při připojení vždy načte nová (network-first), offline se použije uložená kopie.
-const CACHE = 'pismenka-v6';
+const CACHE = 'pismenka-v7';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE.map(u => new Request(u, {cache: 'reload'})))));
