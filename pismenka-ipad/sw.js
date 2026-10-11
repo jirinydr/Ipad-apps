@@ -1,6 +1,6 @@
 // Offline: aplikace se uloží do iPadu a funguje i bez internetu.
 // Při změně aplikace stačí zvýšit číslo verze.
-const CACHE = 'pismenka-v1';
+const CACHE = 'pismenka-v2';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)));

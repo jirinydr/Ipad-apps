@@ -264,7 +264,7 @@ input[type=range]{width:200px;accent-color:var(--t2)}
 "use strict";
 /* ---------- Data ---------- */
 const LETTERS=[
- ['A','a','á','auto'],['E','e','é','Ema'],['I','i','í','iglú'],['O','o','ó','okno'],['U','u','ú','ucho'],
+ ['A','a','A','auto'],['E','e','E','Ema'],['I','i','I','iglú'],['O','o','O','okno'],['U','u','U','ucho'],
  ['M','m','em','máma'],['L','l','el','lev'],['S','s','es','slon'],['P','p','pé','pes'],['T','t','té','táta'],
  ['J','j','jé','jablko'],['V','v','vé','voda'],['D','d','dé','dům'],['N','n','en','nos'],['K','k','ká','kočka'],
  ['Z','z','zet','zebra'],['B','b','bé','balón'],['R','r','er','ryba'],['H','h','há','had'],['C','c','cé','citrón']
@@ -344,7 +344,7 @@ function renderHome(){
   const k=$('#known');k.innerHTML='';
   LETTERS.slice(0,S.unlocked).forEach(L=>{
     const b=document.createElement('button');b.className='chip';b.textContent=L.u+L.l;
-    b.onclick=()=>say(L.name+'. '+L.name+' jako '+L.word+'.');k.append(b);
+    b.onclick=()=>say(L.name+', jako '+L.word+'.');k.append(b);
   });
   show('home');
 }
@@ -394,8 +394,8 @@ function dots(){
 function promptText(t){
   const n=t.L.name;
   if(t.act==='tap')return 'Najdi písmeno '+n+'.';
-  if(t.act==='hear')return 'Kde je '+n+'? '+n+' jako '+t.L.word+'.';
-  return 'Obtáhni prstem písmeno '+n+'.';
+  if(t.act==='hear')return 'Najdi písmeno '+n+', jako '+t.L.word+'.';
+  return 'Obtáhni písmeno '+n+'.';
 }
 function speakPrompt(){
   const t=R.tasks[R.i];const lb=$('#listenBtn');
@@ -456,7 +456,7 @@ function endRound(){
   show('end');dots();
   const nl=$('#newLetter');nl.hidden=!newL;if(newL)$('#newLetterCh').textContent=newL.u+newL.l;
   for(let i=0;i<5;i++)setTimeout(()=>burst(innerWidth*(.15+.175*i),innerHeight*.35,40),i*160);
-  say('Hotovo! Výborně.').then(()=>{if(newL&&!$('#end').hidden)say('Nové písmenko: '+newL.name+'. '+newL.name+' jako '+newL.word+'.')});
+  say('Hotovo! Výborně.').then(()=>{if(newL&&!$('#end').hidden)say('Nové písmenko: '+newL.name+', jako '+newL.word+'.')});
 }
 
 /* ---------- Tracing ---------- */
@@ -533,7 +533,7 @@ $('#unlPlus').onclick=()=>{S.unlocked=Math.min(LETTERS.length,S.unlocked+1);save
 $('#chMinus').onclick=()=>{S.choices=Math.max(2,S.choices-1);save();renderPanel()};
 $('#chPlus').onclick=()=>{S.choices=Math.min(4,S.choices+1);save();renderPanel()};
 $('#rate').oninput=e=>{S.settings.rate=parseFloat(e.target.value);save()};
-$('#testVoice').onclick=()=>{pickVoice();say('Á jako auto. Výborně!')};
+$('#testVoice').onclick=()=>{pickVoice();say('A, jako auto. Výborně!')};
 let armed=false;
 function resetArm(on){armed=on;$('#resetBtn').textContent=on?'Opravdu vynulovat':'Vynulovat pokrok';$('#resetNo').hidden=!on}
 $('#resetBtn').onclick=()=>{if(!armed)return resetArm(true);const st=S.settings;S=JSON.parse(JSON.stringify(DEF));S.settings=st;save();renderPanel()};
