@@ -80,8 +80,10 @@ button:focus-visible{outline:4px solid var(--t4);outline-offset:4px}
   display:grid;place-items:center;box-shadow:0 8px 0 var(--line)}
 .bigletter{font-family:var(--font-letter);font-weight:700;font-size:clamp(100px,min(27vw,22vh),220px);line-height:1}
 .bigletter.cursive{font-family:var(--font-cursive);font-weight:400;font-size:clamp(60px,min(16vw,13vh),130px);line-height:1.5}
-.bigcard.drag{cursor:grab;touch-action:none;box-shadow:0 8px 0 var(--t3);outline:4px dashed var(--t3);outline-offset:8px}
-.bigcard.lifted{opacity:.35}
+.bigcard.drop{outline:4px dashed var(--t3);outline-offset:8px;transition:transform .15s,background .15s}
+.bigcard.drop.over{transform:scale(1.06);background:#EEEAFD}
+.opt.drag{touch-action:none;cursor:grab}
+.opt.lifted{opacity:.3}
 .ghost{position:fixed;z-index:20;pointer-events:none;transform:scale(1.08) rotate(-3deg);box-shadow:0 18px 30px rgba(34,57,74,.25)}
 .opt.target{transform:scale(1.08);box-shadow:0 0 0 6px var(--t3),0 9px 0 var(--c)}
 .listen{width:clamp(150px,min(34vw,30vh),280px);aspect-ratio:1;border-radius:50%;border:0;background:var(--surface);
@@ -397,7 +399,7 @@ function makeRound(){
     else if(acts.includes('trace')&&(i===4||i===9))act='trace';
     else act=pick[rnd(pick.length)];
     const L=pickTarget(prev);prev=L;
-    const t={act,L,lower:isLower(),flip:Math.random()<.5};
+    const t={act,L,lower:isLower(),cursive:Math.random()<.5};
     if(act!=='trace'){
       const n=Math.min(S.choices,LETTERS.length);
       let others=shuffle(pool().filter(x=>x.u!==L.u));
@@ -417,7 +419,7 @@ function promptText(t){
   const n=t.L.name;
   if(t.act==='tap')return 'Najdi písmeno '+n+'.';
   if(t.act==='hear')return 'Najdi písmeno '+n+', jako '+t.L.word+'.';
-  if(t.act==='match')return t.flip?'Přetáhni písmeno '+n+' na stejné psací.':'Přetáhni psací písmeno '+n+' na stejné tiskací.';
+  if(t.act==='match')return t.cursive?'Přetáhni malé psací písmeno '+n+' na velké.':'Přetáhni malé písmeno '+n+' na velké.';
   return 'Obtáhni písmeno '+n+'.';
 }
 function speakPrompt(){
@@ -435,10 +437,9 @@ function renderTask(){
     pr.innerHTML='<div class="bigcard"><span class="bigletter"></span></div>';
     pr.querySelector('.bigletter').textContent=ch;
   }else if(t.act==='match'){
-    $('#hint').textContent=t.flip?'Přetáhni písmeno na stejné psací':'Přetáhni psací písmeno na stejné tiskací';
-    pr.innerHTML='<div class="bigcard drag" id="dragCard"><span class="bigletter"></span></div>';
-    const bl=pr.querySelector('.bigletter');bl.textContent=ch;if(!t.flip)bl.classList.add('cursive');
-    makeDraggable($('#dragCard'));
+    $('#hint').textContent='Přetáhni malé písmeno na velké';
+    pr.innerHTML='<div class="bigcard drop" id="dropCard"><span class="bigletter"></span></div>';
+    pr.querySelector('.bigletter').textContent=t.L.u;
   }else if(t.act==='hear'){
     $('#hint').textContent='Poslouchej a najdi písmeno';
     pr.innerHTML='<button class="listen" id="listenBtn" aria-label="Poslechnout znovu"><svg viewBox="0 0 24 24" fill="none" stroke="#22394A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="#F5B53F"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg></button>';
@@ -451,10 +452,11 @@ function renderTask(){
   if(t.opts){
     op.style.gridTemplateColumns='repeat('+Math.min(t.opts.length,4)+',var(--tile))';
     t.opts.forEach((L,k)=>{
-      const b=document.createElement('button');b.className='opt'+(t.act==='match'&&t.flip?' cursive':'');b.dataset.u=L.u;
-      b.style.setProperty('--c','var(--t'+(k%4+1)+')');b.textContent=t.lower?L.l:L.u;
+      const b=document.createElement('button');b.className='opt'+(t.act==='match'?' drag'+(t.cursive?' cursive':''):'');b.dataset.u=L.u;
+      b.style.setProperty('--c','var(--t'+(k%4+1)+')');b.textContent=t.act==='match'?L.l:(t.lower?L.l:L.u);
       b.setAttribute('aria-label','Písmeno '+L.name);
-      b.onclick=()=>answer(b,L);op.append(b);
+      if(t.act==='match')makeDraggable(b,L);else b.onclick=()=>answer(b,L);
+      op.append(b);
     });
   }
   speakPrompt();
@@ -486,27 +488,30 @@ function endRound(){
 }
 
 /* ---------- Drag (psací ↔ tiskací) ---------- */
-function makeDraggable(card){
-  let g=null,dx=0,dy=0,over=null;
-  const tileAt=(x,y)=>{const el=document.elementFromPoint(x,y);return el?el.closest('.opt'):null};
-  card.onpointerdown=e=>{
-    if(R.locked)return;e.preventDefault();card.setPointerCapture(e.pointerId);
-    const r=card.getBoundingClientRect();dx=e.clientX-r.left;dy=e.clientY-r.top;
-    g=card.cloneNode(true);g.removeAttribute('id');g.classList.add('ghost');
+function makeDraggable(tile,L){
+  let g=null,dx=0,dy=0,sx=0,sy=0,moved=false,over=false;
+  const drop=()=>$('#dropCard');
+  const isOver=(x,y)=>{const d=drop();if(!d)return false;const r=d.getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom};
+  tile.onpointerdown=e=>{
+    if(R.locked||g)return;e.preventDefault();try{tile.setPointerCapture(e.pointerId)}catch(_){}
+    const r=tile.getBoundingClientRect();dx=e.clientX-r.left;dy=e.clientY-r.top;sx=e.clientX;sy=e.clientY;moved=false;
+    g=tile.cloneNode(true);g.classList.add('ghost');
     Object.assign(g.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
-    document.body.append(g);card.classList.add('lifted');
+    document.body.append(g);tile.classList.add('lifted');
   };
-  card.onpointermove=e=>{
-    if(!g)return;g.style.left=(e.clientX-dx)+'px';g.style.top=(e.clientY-dy)+'px';
-    const t=tileAt(e.clientX,e.clientY);if(t!==over){if(over)over.classList.remove('target');over=t;if(over)over.classList.add('target')}
+  tile.onpointermove=e=>{
+    if(!g)return;if(Math.hypot(e.clientX-sx,e.clientY-sy)>10)moved=true;
+    g.style.left=(e.clientX-dx)+'px';g.style.top=(e.clientY-dy)+'px';
+    const o=isOver(e.clientX,e.clientY);if(o!==over){over=o;const d=drop();if(d)d.classList.toggle('over',o)}
   };
-  const drop=e=>{
-    if(!g)return;g.remove();g=null;card.classList.remove('lifted');
-    if(over)over.classList.remove('target');
-    const t=e.type==='pointerup'?tileAt(e.clientX,e.clientY):null;over=null;
-    if(t){const L=LETTERS.find(x=>x.u===t.dataset.u);if(L)answer(t,L)}
+  const end=e=>{
+    if(!g)return;g.remove();g=null;tile.classList.remove('lifted');
+    const d=drop();if(d)d.classList.remove('over');over=false;
+    if(e.type!=='pointerup')return;
+    // a plain tap also counts as an answer
+    if(!moved||isOver(e.clientX,e.clientY))answer(tile,L);
   };
-  card.onpointerup=drop;card.onpointercancel=drop;
+  tile.onpointerup=end;tile.onpointercancel=end;
 }
 
 /* ---------- Tracing ---------- */
