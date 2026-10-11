@@ -428,7 +428,7 @@ function promptText(t){
   if(t.act==='tap')return 'Najdi písmeno '+n+'.';
   if(t.act==='hear')return 'Najdi písmeno '+n+', jako '+t.L.word+'.';
   if(t.act==='match')return t.cursive?'Přetáhni malé psací písmeno '+n+' na velké.':'Přetáhni malé písmeno '+n+' na velké.';
-  return 'Obtáhni písmeno '+n+'.';
+  return 'Obtáhni písmeno '+n+'. Začni u zelené tečky.';
 }
 function speakPrompt(){
   const t=R.tasks[R.i];const lb=$('#listenBtn');
@@ -453,7 +453,7 @@ function renderTask(){
     pr.innerHTML='<button class="listen" id="listenBtn" aria-label="Poslechnout znovu"><svg viewBox="0 0 24 24" fill="none" stroke="#22394A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="#F5B53F"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg></button>';
     $('#listenBtn').onclick=speakPrompt;
   }else{
-    $('#hint').textContent='Obtáhni písmeno prstem';
+    $('#hint').textContent='Jeď prstem po čáře od zelené tečky';
     pr.innerHTML='<div class="trace-stage" id="traceStage"><div class="trace-wrap" id="traceWrap"><canvas id="cg"></canvas><canvas id="cd"></canvas></div></div>';
     requestAnimationFrame(()=>setupTrace(ch));
   }
@@ -561,7 +561,65 @@ function makeDraggable(tile,L){
   tile.onpointerup=end;tile.onpointercancel=end;
 }
 
-/* ---------- Tracing ---------- */
+/* ---------- Tracing (po čáře, ve správném pořadí tahů) ---------- */
+// Letters drawn in a 100×105 box: cap/ascender top 15, x-height 45, baseline 85, descender 100.
+const Ln=(x1,y1,x2,y2)=>({t:'L',a:[x1,y1,x2,y2]});
+const Ar=(cx,cy,rx,ry,d0,d1)=>({t:'A',a:[cx,cy,rx,ry,d0,d1]});
+const DOT=(x,y)=>[Ar(x,y,2.5,2.5,-90,270)];
+const STROKES={
+ A:[[Ln(50,15,25,85)],[Ln(50,15,75,85)],[Ln(34,60,66,60)]],
+ E:[[Ln(32,15,32,85)],[Ln(32,15,70,15)],[Ln(32,50,64,50)],[Ln(32,85,70,85)]],
+ I:[[Ln(50,15,50,85)]],
+ O:[[Ar(50,50,28,35,-90,-450)]],
+ U:[[Ln(28,15,28,62),Ar(50,62,22,23,180,0),Ln(72,62,72,15)]],
+ M:[[Ln(25,85,25,15),Ln(25,15,50,60),Ln(50,60,75,15),Ln(75,15,75,85)]],
+ L:[[Ln(32,15,32,85),Ln(32,85,70,85)]],
+ S:[[Ar(50,32,21,17,-20,-270),Ar(50,67,22,18,-90,160)]],
+ P:[[Ln(32,15,32,85)],[Ln(32,15,52,15),Ar(52,33,18,18,-90,90),Ln(52,51,32,51)]],
+ T:[[Ln(25,15,75,15)],[Ln(50,15,50,85)]],
+ J:[[Ln(65,15,65,65),Ar(45,65,20,20,0,180)]],
+ V:[[Ln(25,15,50,85),Ln(50,85,75,15)]],
+ D:[[Ln(32,15,32,85)],[Ln(32,15,46,15),Ar(46,50,24,35,-90,90),Ln(46,85,32,85)]],
+ N:[[Ln(28,85,28,15),Ln(28,15,72,85),Ln(72,85,72,15)]],
+ K:[[Ln(32,15,32,85)],[Ln(70,15,32,55)],[Ln(45,43,72,85)]],
+ Z:[[Ln(28,15,72,15),Ln(72,15,28,85),Ln(28,85,72,85)]],
+ B:[[Ln(32,15,32,85)],[Ln(32,15,50,15),Ar(50,32,16,17,-90,90),Ln(50,49,32,49)],[Ln(32,49,52,49),Ar(52,67,18,18,-90,90),Ln(52,85,32,85)]],
+ R:[[Ln(32,15,32,85)],[Ln(32,15,50,15),Ar(50,32,17,17,-90,90),Ln(50,49,32,49)],[Ln(46,49,70,85)]],
+ H:[[Ln(30,15,30,85)],[Ln(70,15,70,85)],[Ln(30,50,70,50)]],
+ C:[[Ar(54,50,26,35,-35,-325)]],
+ a:[[Ar(48,65,18,20,-20,-380)],[Ln(66,45,66,85)]],
+ e:[[Ln(30,65,68,65),Ar(49,65,19,20,0,-315)]],
+ i:[[Ln(50,45,50,85)],DOT(50,30)],
+ o:[[Ar(50,65,19,20,-90,-450)]],
+ u:[[Ln(32,45,32,68),Ar(50,68,18,17,180,0),Ln(68,68,68,45)],[Ln(68,45,68,85)]],
+ m:[[Ln(24,45,24,85)],[Ar(37,58,13,13,180,360),Ln(50,58,50,85)],[Ar(63,58,13,13,180,360),Ln(76,58,76,85)]],
+ l:[[Ln(50,15,50,85)]],
+ s:[[Ar(50,55,15,10,-20,-270),Ar(50,75,16,10,-90,160)]],
+ p:[[Ln(34,45,34,100)],[Ar(51,65,17,20,180,540)]],
+ t:[[Ln(46,20,46,85)],[Ln(32,45,62,45)]],
+ j:[[Ln(56,45,56,92),Ar(44,92,12,9,0,180)],DOT(56,30)],
+ v:[[Ln(30,45,50,85),Ln(50,85,70,45)]],
+ d:[[Ar(48,65,18,20,-20,-380)],[Ln(66,15,66,85)]],
+ n:[[Ln(30,45,30,85)],[Ar(48,62,18,15,180,360),Ln(66,62,66,85)]],
+ k:[[Ln(34,15,34,85)],[Ln(64,45,34,68)],[Ln(44,61,66,85)]],
+ z:[[Ln(30,45,70,45),Ln(70,45,30,85),Ln(30,85,70,85)]],
+ b:[[Ln(34,15,34,85)],[Ar(51,65,17,20,180,540)]],
+ r:[[Ln(36,45,36,85)],[Ar(53,62,17,15,180,300)]],
+ h:[[Ln(30,15,30,85)],[Ar(48,62,18,15,180,360),Ln(66,62,66,85)]],
+ c:[[Ar(52,65,19,20,-35,-325)]]
+};
+function strokePoints(segs){
+  const raw=[];
+  for(const s of segs){
+    if(s.t==='L'){const[x1,y1,x2,y2]=s.a,n=Math.max(2,Math.ceil(Math.hypot(x2-x1,y2-y1)/1.5));for(let i=0;i<=n;i++)raw.push([x1+(x2-x1)*i/n,y1+(y2-y1)*i/n])}
+    else{const[cx,cy,rx,ry,d0,d1]=s.a,n=Math.max(8,Math.ceil(Math.abs(d1-d0)/4));for(let i=0;i<=n;i++){const d=(d0+(d1-d0)*i/n)*Math.PI/180;raw.push([cx+rx*Math.cos(d),cy+ry*Math.sin(d)])}}
+  }
+  // resample to even spacing so progress feels the same on lines and curves
+  const out=[raw[0]];let acc=0;
+  for(let i=1;i<raw.length;i++){const d=Math.hypot(raw[i][0]-raw[i-1][0],raw[i][1]-raw[i-1][1]);acc+=d;if(acc>=3){out.push(raw[i]);acc=0}}
+  const last=raw[raw.length-1],pl=out[out.length-1];if(pl[0]!==last[0]||pl[1]!==last[1])out.push(last);
+  return out;
+}
 let T=null;
 function setupTrace(ch){
   const stage=$('#traceStage'),wrap=$('#traceWrap');if(!stage)return;
@@ -570,45 +628,78 @@ function setupTrace(ch){
   wrap.style.width=size+'px';wrap.style.height=size+'px';
   const g=$('#cg'),d=$('#cd');
   [g,d].forEach(c=>{c.width=size*dpr;c.height=size*dpr;c.style.width=size+'px';c.style.height=size+'px'});
-  const gc=g.getContext('2d'),dc=d.getContext('2d');
-  const font='700 '+Math.round(size*.74)+'px Andika, "Trebuchet MS", sans-serif';
-  function drawGlyph(ctx,color){
-    ctx.font=font;ctx.textAlign='center';ctx.textBaseline='alphabetic';
-    const m=ctx.measureText(ch);
-    const y=size/2+((m.actualBoundingBoxAscent||size*.5)-(m.actualBoundingBoxDescent||0))/2;
-    ctx.fillStyle=color;ctx.fillText(ch,size/2,y);
-  }
-  gc.setTransform(dpr,0,0,dpr,0,0);drawGlyph(gc,'#D3E5E1');
-  // sample points inside the glyph
-  const off=document.createElement('canvas');off.width=size;off.height=size;
-  const oc=off.getContext('2d');drawGlyph(oc,'#000');
-  const id=oc.getImageData(0,0,size,size).data,step=Math.max(4,Math.round(size/70)),pts=[];
-  for(let y=0;y<size;y+=step)for(let x=0;x<size;x+=step)if(id[(y*size+x)*4+3]>140)pts.push([x,y]);
-  dc.setTransform(dpr,0,0,dpr,0,0);dc.lineCap='round';dc.lineJoin='round';dc.lineWidth=size*.115;dc.strokeStyle='#F5B53F';
-  T={ch,size,dc,d,pts,last:null,done:false};
-  d.onpointerdown=e=>{if(T.done)return;d.setPointerCapture(e.pointerId);T.last=pos(e);dot(T.last)};
-  d.onpointermove=e=>{if(!T.last||T.done)return;const p=pos(e);dc.beginPath();dc.moveTo(T.last[0],T.last[1]);dc.lineTo(p[0],p[1]);dc.stroke();T.last=p};
-  d.onpointerup=d.onpointercancel=()=>{if(!T.last)return;T.last=null;check()};
+  const def=STROKES[ch]||STROKES[ch.toUpperCase()];
+  const sc=size/110,ox=(size-100*sc)/2,oy=(size-105*sc)/2;
+  const strokes=def.map(strokePoints);
+  if(T&&T.raf)cancelAnimationFrame(T.raf);
+  T={ch,size,sc,ox,oy,strokes,si:0,pi:0,finger:null,done:false,d,gc:g.getContext('2d'),dc:d.getContext('2d'),raf:0,t0:performance.now()};
+  drawGuide();
+  const toBox=e=>{const b=d.getBoundingClientRect();return[(e.clientX-b.left-ox)/sc,(e.clientY-b.top-oy)/sc]};
+  d.onpointerdown=e=>{if(T.done)return;try{d.setPointerCapture(e.pointerId)}catch(_){}T.finger=toBox(e);advance()};
+  d.onpointermove=e=>{if(!T.finger||T.done)return;T.finger=toBox(e);advance()};
+  d.onpointerup=d.onpointercancel=()=>{T.finger=null};
+  loop();
 }
-function pos(e){const b=T.d.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top]}
-function dot(p){const c=T.dc;c.beginPath();c.arc(p[0],p[1],c.lineWidth/2,0,Math.PI*2);c.fillStyle='#F5B53F';c.fill()}
-function check(){
-  if(!T||T.done||!T.pts.length)return;
-  const w=T.size*dpr,data=T.dc.getImageData(0,0,w,w).data;let hit=0;
-  // Every part of the letter must be traced: split it into an 8×8 grid and check each piece separately.
-  const G=8,cell={};
-  for(const [x,y] of T.pts){
-    const px=Math.round(x*dpr),py=Math.round(y*dpr),on=data[(py*w+px)*4+3]>40;if(on)hit++;
-    const k=Math.floor(x/T.size*G)+','+Math.floor(y/T.size*G),c=cell[k]||(cell[k]={n:0,h:0});c.n++;if(on)c.h++;
-  }
-  const parts=Object.values(cell).filter(c=>c.n>=4);
-  const allParts=parts.every(c=>c.h/c.n>=0.55);
-  if(hit/T.pts.length>=0.82&&allParts){
-    T.done=true;stat(R.tasks[R.i].L.u).tr++;save();
-    burstEl($('#traceWrap'),70);say(PRAISE[rnd(PRAISE.length)]);setTimeout(next,1700);
+const P=(p)=>[T.ox+p[0]*T.sc,T.oy+p[1]*T.sc];
+function pathOf(c,pts,upto){c.beginPath();const a=P(pts[0]);c.moveTo(a[0],a[1]);for(let i=1;i<upto;i++){const b=P(pts[i]);c.lineTo(b[0],b[1])}}
+function drawGuide(){
+  const c=T.gc;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,T.size,T.size);
+  c.lineCap='round';c.lineJoin='round';c.strokeStyle='#D3E5E1';c.lineWidth=14*T.sc;
+  T.strokes.forEach(pts=>{if(pts.length<6){const a=P(pts[0]);c.beginPath();c.arc(a[0],a[1],7*T.sc,0,7);c.fillStyle='#D3E5E1';c.fill()}else{pathOf(c,pts,pts.length);c.stroke()}});
+  // dashed centre line shows the path to follow
+  c.setLineDash([2*T.sc,5*T.sc]);c.strokeStyle='#9DBDB6';c.lineWidth=1.6*T.sc;
+  T.strokes.forEach(pts=>{if(pts.length>=6){pathOf(c,pts,pts.length);c.stroke()}});
+  c.setLineDash([]);
+}
+function advance(){
+  if(T.done)return;
+  const f=T.finger;let moved=true;
+  while(moved&&!T.done){
+    moved=false;const pts=T.strokes[T.si];
+    const look=Math.min(pts.length-1,T.pi+4);
+    for(let j=T.pi;j<=look;j++){
+      if(Math.hypot(f[0]-pts[j][0],f[1]-pts[j][1])<9){T.pi=j+1;moved=true;break}
+    }
+    if(T.pi>=pts.length){
+      T.si++;T.pi=0;T.finger=null;
+      if(T.si>=T.strokes.length){finishTrace();return}
+      burstEl($('#traceWrap'),12);break;
+    }
   }
 }
-$('#clearBtn').onclick=()=>{if(!T||T.done)return;T.dc.save();T.dc.setTransform(1,0,0,1,0,0);T.dc.clearRect(0,0,T.d.width,T.d.height);T.dc.restore();speakPrompt()};
+function loop(){
+  if(!T||!T.d.isConnected)return;
+  const c=T.dc;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,T.size,T.size);
+  c.lineCap='round';c.lineJoin='round';
+  // finished strokes + the part of the current one
+  T.strokes.forEach((pts,k)=>{
+    const upto=k<T.si?pts.length:k===T.si?T.pi:0;if(upto<1)return;
+    if(pts.length<6){const a=P(pts[0]);c.beginPath();c.arc(a[0],a[1],7*T.sc,0,7);c.fillStyle='#F5B53F';c.fill();return}
+    c.strokeStyle='#F5B53F';c.lineWidth=12*T.sc;pathOf(c,pts,Math.max(2,upto));c.stroke();
+  });
+  if(!T.done){
+    const pts=T.strokes[T.si],cur=P(pts[Math.min(T.pi,pts.length-1)]);
+    // numbers at the start of strokes still to do
+    c.font='700 '+Math.round(9*T.sc)+'px Andika, sans-serif';c.textAlign='center';c.textBaseline='middle';
+    for(let k=T.si+1;k<T.strokes.length;k++){const s=P(T.strokes[k][0]);c.fillStyle='#8C7AE6';c.beginPath();c.arc(s[0],s[1],6*T.sc,0,7);c.fill();c.fillStyle='#FFFFFF';c.fillText(String(k+1),s[0],s[1]+.5)}
+    // direction arrow a few points ahead
+    const ah=pts[Math.min(T.pi+5,pts.length-1)],bh=pts[Math.min(T.pi+9,pts.length-1)];
+    if(pts.length>=6&&(ah!==bh)){const A=P(ah),B=P(bh),an=Math.atan2(B[1]-A[1],B[0]-A[0]);
+      c.save();c.translate(B[0],B[1]);c.rotate(an);c.fillStyle='#2FA463';c.beginPath();c.moveTo(6*T.sc,0);c.lineTo(-3*T.sc,-5*T.sc);c.lineTo(-3*T.sc,5*T.sc);c.closePath();c.fill();c.restore()}
+    // pulsing green dot where the finger should be
+    const pulse=1+.18*Math.sin((performance.now()-T.t0)/180);
+    c.fillStyle='rgba(47,164,99,.25)';c.beginPath();c.arc(cur[0],cur[1],11*T.sc*pulse,0,7);c.fill();
+    c.fillStyle='#2FA463';c.beginPath();c.arc(cur[0],cur[1],6.5*T.sc,0,7);c.fill();
+    if(T.pi===0){c.fillStyle='#FFFFFF';c.fillText(String(T.si+1),cur[0],cur[1]+.5)}
+  }
+  if(T.finger){const f=P(T.finger);c.fillStyle='rgba(34,57,74,.25)';c.beginPath();c.arc(f[0],f[1],5*T.sc,0,7);c.fill()}
+  T.raf=requestAnimationFrame(loop);
+}
+function finishTrace(){
+  T.done=true;stat(R.tasks[R.i].L.u).tr++;save();
+  burstEl($('#traceWrap'),70);say(PRAISE[rnd(PRAISE.length)]);setTimeout(next,1700);
+}
+$('#clearBtn').onclick=()=>{if(!T||T.done)return;T.si=0;T.pi=0;T.finger=null;speakPrompt()};
 
 /* ---------- Parent panel ---------- */
 function letterStatus(i,L){
