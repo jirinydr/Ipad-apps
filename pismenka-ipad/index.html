@@ -84,6 +84,8 @@ button:focus-visible{outline:4px solid var(--t4);outline-offset:4px}
 .bigcard.drop.over{transform:scale(1.06);background:#EEEAFD}
 .opt.drag{touch-action:none;cursor:grab}
 .opt.lifted{opacity:.3}
+.opt.nudge{animation:nudge .6s ease}
+@keyframes nudge{30%{transform:translateY(-14px)}60%{transform:translateY(0)}80%{transform:translateY(-6px)}}
 .ghost{position:fixed;z-index:20;pointer-events:none;transform:scale(1.08) rotate(-3deg);box-shadow:0 18px 30px rgba(34,57,74,.25)}
 .opt.target{transform:scale(1.08);box-shadow:0 0 0 6px var(--t3),0 9px 0 var(--c)}
 .listen{width:clamp(150px,min(34vw,30vh),280px);aspect-ratio:1;border-radius:50%;border:0;background:var(--surface);
@@ -165,6 +167,11 @@ input[type=range]{width:200px;accent-color:var(--t2)}
 @keyframes wave{50%{transform:scale(1.12)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:10}
+.sky{position:fixed;inset:0;z-index:8;background:#06122B;transition:opacity .8s}
+.sky.fade{opacity:0}
+.sky canvas{position:absolute;inset:0;width:100%;height:100%}
+.sky-text{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--font-ui);font-weight:800;font-size:clamp(64px,14vmin,150px);color:#FFFFFF;opacity:0;transform:scale(.6);transition:opacity .6s,transform .6s;pointer-events:none}
+.sky-text.on{opacity:1;transform:scale(1)}
 </style>
 
 <div class="app">
@@ -272,6 +279,7 @@ input[type=range]{width:200px;accent-color:var(--t2)}
 </div>
 
 <canvas id="confetti"></canvas>
+<div class="sky" id="sky" hidden><canvas id="fwc"></canvas><div class="sky-text" id="skyText">Hotovo!</div></div>
 
 <script>
 (function(){
@@ -483,8 +491,46 @@ function endRound(){
   S.lastAcc=acc;save();
   show('end');dots();
   const nl=$('#newLetter');nl.hidden=!newL;if(newL)$('#newLetterCh').textContent=newL.u+newL.l;
-  for(let i=0;i<5;i++)setTimeout(()=>burst(innerWidth*(.15+.175*i),innerHeight*.35,40),i*160);
-  say('Hotovo! Výborně.').then(()=>{if(newL&&!$('#end').hidden)say('Nové písmenko: '+newL.name+', jako '+newL.word+'.')});
+  fireworks(()=>{if(newL&&!$('#end').hidden)say('Nové písmenko: '+newL.name+', jako '+newL.word+'.')});
+  setTimeout(()=>say('Hotovo! Výborně.'),1900);
+}
+
+/* ---------- Fireworks (end of round) ---------- */
+let FW=null;
+function fireworks(done){
+  const sky=$('#sky'),cv=$('#fwc'),cx=cv.getContext('2d'),txt=$('#skyText');
+  if(FW){FW.timers.forEach(clearTimeout);cancelAnimationFrame(FW.raf)}
+  sky.hidden=false;sky.classList.remove('fade');txt.classList.remove('on');
+  const W=innerWidth,H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;cx.setTransform(dpr,0,0,dpr,0,0);
+  cx.fillStyle='#06122B';cx.fillRect(0,0,W,H);
+  const st={rockets:[],sparks:[],timers:[],raf:0};FW=st;
+  const hue=()=>Math.floor(Math.random()*360);
+  const big=Math.min(W,H)/90;
+  function launch(x,isBig){st.rockets.push({x,y:H,vx:(Math.random()-.5)*1.5,vy:-(Math.sqrt(H)*0.42+Math.random()*2)-(isBig?1.2:0),h:hue(),big:isBig})}
+  function burstAt(r){
+    const n=r.big?170:110,sp=big*(r.big?1.15:.8),kind=Math.random(),h2=hue();
+    for(let i=0;i<n;i++){
+      const a=Math.PI*2*i/n+Math.random()*.06,v=kind<.3?sp:Math.random()*sp+.6;
+      // rainbow bursts, two-color bursts and rings
+      const h=kind<.5?(i/n*360+r.h)%360:(i%2?r.h:h2);
+      st.sparks.push({x:r.x,y:r.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,h,life:65+Math.random()*45,max:110,tw:Math.random()<.3});
+    }
+  }
+  function step(){
+    cx.globalCompositeOperation='source-over';cx.fillStyle='rgba(6,18,43,0.26)';cx.fillRect(0,0,W,H);
+    cx.globalCompositeOperation='lighter';
+    st.rockets=st.rockets.filter(r=>{r.vy+=.12;r.x+=r.vx;r.y+=r.vy;cx.fillStyle='hsl('+r.h+',100%,70%)';cx.beginPath();cx.arc(r.x,r.y,3,0,7);cx.fill();if(r.vy>=-1){burstAt(r);return false}return true});
+    st.sparks=st.sparks.filter(p=>{p.vy+=.06;p.vx*=.985;p.vy*=.985;p.x+=p.vx;p.y+=p.vy;p.life--;
+      if(!(p.tw&&Math.random()<.4)){cx.globalAlpha=Math.max(0,p.life/p.max);cx.fillStyle='hsl('+p.h+',100%,62%)';cx.beginPath();cx.arc(p.x,p.y,2.6,0,7);cx.fill();cx.globalAlpha=1}
+      return p.life>0});
+    st.raf=requestAnimationFrame(step);
+  }
+  const plan=[[0,.5,1],[300,.2],[500,.8],[800,.35],[1000,.65],[1250,.1],[1400,.9],[1700,.5,1],[2000,.25],[2100,.75],[2450,.15,1],[2500,.85,1],[2850,.5,1],[3050,.3],[3100,.7],[3400,.45],[3450,.55],[3700,.5,1],[3750,.15],[3800,.85]];
+  (reduce?plan.slice(0,6):plan).forEach(([ms,x,b])=>st.timers.push(setTimeout(()=>launch(W*x,!!b),ms)));
+  st.timers.push(setTimeout(()=>txt.classList.add('on'),1800));
+  st.timers.push(setTimeout(()=>sky.classList.add('fade'),reduce?3000:5600));
+  st.timers.push(setTimeout(()=>{cancelAnimationFrame(st.raf);sky.hidden=true;FW=null;done&&done()},reduce?3800:6400));
+  st.raf=requestAnimationFrame(step);
 }
 
 /* ---------- Drag (psací ↔ tiskací) ---------- */
@@ -508,8 +554,9 @@ function makeDraggable(tile,L){
     if(!g)return;g.remove();g=null;tile.classList.remove('lifted');
     const d=drop();if(d)d.classList.remove('over');over=false;
     if(e.type!=='pointerup')return;
-    // a plain tap also counts as an answer
-    if(!moved||isOver(e.clientX,e.clientY))answer(tile,L);
+    // only a real drag into the frame counts; a plain tap just gets a hint
+    if(moved&&isOver(e.clientX,e.clientY))answer(tile,L);
+    else if(!moved){tile.classList.remove('nudge');void tile.offsetWidth;tile.classList.add('nudge');say('Chyť písmeno a přetáhni ho nahoru.')}
   };
   tile.onpointerup=end;tile.onpointercancel=end;
 }
