@@ -58,12 +58,12 @@ function task(W,done){
     b.onclick=async()=>{
       if(solved)return;
       if(c===first){
-        solved=true;b.classList.add('right');word.classList.add('on');K.success(b);
+        solved=true;K.mark(true,first);b.classList.add('right');word.classList.add('on');K.success(b);
         const n=K.letterName(c);
         await K.say(n+', '+n+' jako '+W.w+'.');
-        K.praise();done();
+        K.praise().then(done);
       }else{
-        b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
+        K.mark(false,first);b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
         K.say('To je '+K.letterName(c)+'. Zkus to znovu.');
       }
     };

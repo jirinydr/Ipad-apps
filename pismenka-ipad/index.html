@@ -289,7 +289,7 @@ input[type=range]{width:200px;accent-color:var(--t2)}
 "use strict";
 /* ---------- Data ---------- */
 const LETTERS=[
- ['A','a','A','auto'],['E','e','E','Ema'],['I','i','I','iglú'],['O','o','O','okno'],['U','u','U','ucho'],
+ ['A','a','a','auto'],['E','e','e','Ema'],['I','i','i','iglú'],['O','o','o','okno'],['U','u','u','ucho'],
  ['M','m','em','máma'],['L','l','el','lev'],['S','s','es','slon'],['P','p','pé','pes'],['T','t','té','táta'],
  ['J','j','jé','jablko'],['V','v','vé','voda'],['D','d','dé','dům'],['N','n','en','nos'],['K','k','ká','kočka'],
  ['Z','z','zet','zebra'],['B','b','bé','balón'],['R','r','er','ryba'],['H','h','há','had'],['C','c','cé','citrón']
@@ -736,7 +736,7 @@ $('#unlPlus').onclick=()=>{S.unlocked=Math.min(LETTERS.length,S.unlocked+1);save
 $('#chMinus').onclick=()=>{S.choices=Math.max(2,S.choices-1);save();renderPanel()};
 $('#chPlus').onclick=()=>{S.choices=Math.min(8,S.choices+1);save();renderPanel()};
 $('#rate').oninput=e=>{S.settings.rate=parseFloat(e.target.value);save()};
-$('#testVoice').onclick=()=>{pickVoice();say('A, jako auto. Výborně!')};
+$('#testVoice').onclick=()=>{pickVoice();say('a, jako auto. Výborně!')};
 let armed=false;
 function resetArm(on){armed=on;$('#resetBtn').textContent=on?'Opravdu vynulovat':'Vynulovat pokrok';$('#resetNo').hidden=!on}
 $('#resetBtn').onclick=()=>{if(!armed)return resetArm(true);const st=S.settings;S=JSON.parse(JSON.stringify(DEF));S.settings=st;save();renderPanel()};

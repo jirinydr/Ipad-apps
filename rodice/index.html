@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Pro rodiče</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+body{overflow-y:auto;-webkit-user-select:text;user-select:text}
+.wrap{max-width:960px;margin:0 auto;padding:16px 16px 60px;display:flex;flex-direction:column;gap:26px;font-family:var(--font-letter)}
+.head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:relative;padding-top:2px}
+.head .back{position:static}
+h1{font-family:var(--font-ui);font-weight:800;font-size:clamp(32px,5vw,44px);margin:0;line-height:1}
+h2{font-family:var(--font-ui);font-weight:600;font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.box{background:var(--surface);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:16px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:14px}
+.ac{background:var(--surface);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:10px;border-top:6px solid var(--c,var(--t2))}
+.ac h3{font-family:var(--font-ui);font-weight:800;font-size:22px;margin:0;line-height:1.1}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.nums div{background:var(--bg);border-radius:12px;padding:8px 6px;text-align:center}
+.nums b{display:block;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.nums span{font-size:13px;color:var(--muted)}
+.bar{height:8px;border-radius:4px;background:var(--bg);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:4px}
+.meta{font-size:14px;color:var(--muted)}
+.weak{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.weak .lbl{font-size:14px;color:var(--muted);margin-right:2px}
+.chip{background:#FBE1DC;color:#9C3020;border-radius:999px;padding:2px 10px;font-weight:700;font-size:15px}
+.chip.good{background:var(--ok-soft);color:#1E7546}
+.empty{font-size:15px;color:var(--muted)}
+.field{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;font-size:18px}
+.field small{display:block;color:var(--muted);font-size:14px}
+.field + .field{border-top:1px solid var(--bg);padding-top:14px}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opts label{display:flex;align-items:center;gap:8px;background:var(--bg);padding:8px 14px;border-radius:12px;font-size:17px;cursor:pointer}
+.opts input{width:20px;height:20px;accent-color:var(--t2)}
+.opts .cur{font-family:var(--font-cursive);font-size:1.3em;line-height:1}
+input[type=range]{width:220px;accent-color:var(--t2)}
+.btn{border:0;border-radius:12px;background:var(--bg);padding:10px 18px;font-size:16px;font-weight:600;font-family:var(--font-ui)}
+.btn.danger{background:#FBE1DC;color:#9C3020}
+.voice{font-size:16px;color:var(--muted)}
+.voice.bad{color:#9C3020}
+.appname{font-family:var(--font-ui);font-weight:800;font-size:19px}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="head">
+    <a class="back" href="../"><svg viewBox="0 0 24 24" fill="none" stroke="#22394A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Aplikace</a>
+    <h1>Pro rodiče</h1>
+  </div>
+
+  <section>
+    <h2>Jak se daří</h2>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section>
+    <h2>Nastavení aplikací</h2>
+    <div class="box" id="settings"></div>
+  </section>
+
+  <section>
+    <h2>Rozcestník – které aplikace dítě uvidí</h2>
+    <div class="box"><div class="opts" id="visible"></div></div>
+  </section>
+
+  <section>
+    <h2>Hlas</h2>
+    <div class="box">
+      <div class="field"><div>Rychlost řeči<small>Platí pro všechny nové aplikace.</small></div>
+        <div style="display:flex;align-items:center;gap:12px"><span>pomaleji</span><input type="range" id="rate" min="0.7" max="1.3" step="0.05"><span>rychleji</span></div></div>
+      <div class="field"><div class="voice" id="voiceInfo">Hledám český hlas…</div><button class="btn" id="testVoice">Vyzkoušet hlas</button></div>
+      <p class="voice" style="margin:0">Lepší hlas na iPadu: Nastavení → Zpřístupnění → Předčítaný obsah → Hlasy → Čeština → Zuzana (Vylepšený). Na Macu: Nastavení systému → Zpřístupnění → Read &amp; Speak → u „System voice“ ikona ⓘ → Czech → Zuzana (Enhanced).</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Data</h2>
+    <div class="box">
+      <div class="field"><div>Pokrok i nastavení se ukládají jen v tomto zařízení.<small>Písmenka mají vlastní pokrok – nuluje se v nich (Pro rodiče).</small></div>
+        <div class="opts"><button class="btn danger" id="reset">Vynulovat statistiky</button><button class="btn" id="resetNo" hidden>Ne, ponechat</button></div></div>
+    </div>
+  </section>
+</main>
+<script src="../shared/common.js"></script>
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const read=k=>{try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return {}}};
+const write=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const patch=(k,obj)=>write(k,Object.assign(read(k),obj));
+
+const APPS=[
+ {id:'pismenka-ipad',name:'Písmenka',c:'var(--t1)'},
+ {id:'prvni-pismeno',name:'Na co začíná?',c:'var(--t2)',item:x=>x.toUpperCase()},
+ {id:'poslouchej',name:'Poslouchej',c:'var(--t3)',weakLabel:'Omylem vybrané:'},
+ {id:'spojovacka',name:'Spojovačka',c:'var(--t4)',item:x=>x+' '+x.toLowerCase()},
+ {id:'skladani-slov',name:'Skládej slova',c:'var(--sun)'},
+ {id:'slabiky',name:'Slabiky',c:'var(--t1)'}
+];
+
+/* ---------- Přehled ---------- */
+const fmtDate=t=>{if(!t)return 'zatím nehráno';const d=new Date(t),now=new Date();
+  const day=d.toDateString()===now.toDateString()?'dnes':d.toLocaleDateString('cs-CZ',{day:'numeric',month:'numeric'});
+  return 'naposledy '+day+' v '+d.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'})};
+function card(A,s){
+  const ok=s.ok||0,bad=s.bad||0,tot=ok+bad,pct=tot?Math.round(ok/tot*100):0;
+  const items=Object.entries(s.items||{}).filter(([,v])=>v.bad>0).sort((a,b)=>b[1].bad-a[1].bad||a[1].ok-b[1].ok).slice(0,8);
+  const lab=A.item||(x=>x);
+  const el=document.createElement('div');el.className='ac';el.style.setProperty('--c',A.c);
+  el.innerHTML=`<h3>${A.name}</h3>
+   <div class="nums"><div><b>${s.rounds||0}</b><span>kol</span></div><div><b>${ok}</b><span>správně</span></div><div><b>${bad}</b><span>chyb</span></div></div>
+   ${tot?`<div class="bar"><i style="width:${pct}%"></i></div><div class="meta">Úspěšnost ${pct} % · ${fmtDate(s.last)}</div>`:`<div class="meta">${fmtDate(s.last)}</div>`}
+   ${items.length?`<div class="weak"><span class="lbl">${A.weakLabel||'Nejvíc chyb:'}</span>${items.map(([k,v])=>`<span class="chip">${lab(k)} <small>${v.bad}×</small></span>`).join('')}</div>`:(tot?'<div class="weak"><span class="chip good">Zatím bez chyb</span></div>':'')}
+   ${s.extra||''}`;
+  return el;
+}
+function pismenkaStats(){
+  const p=read('pismenka-v1');const st=p.stats||{};let ok=0,bad=0;const items={};
+  Object.entries(st).forEach(([u,v])=>{ok+=v.ok||0;bad+=v.bad||0;items[u]={ok:v.ok||0,bad:v.bad||0}});
+  const n=p.unlocked||3;
+  const letters='AEIOUMLSPTJVDNKZBRHC'.slice(0,n).split('').join(' ');
+  return {rounds:p.rounds||0,ok,bad,items,last:0,
+    extra:`<div class="meta">Písmen ve hře: <b>${n}</b> (${letters})<br>Podrobnosti a nastavení najdete přímo v Písmenkách → Pro rodiče.</div>`};
+}
+function renderCards(){
+  const all=read('ucime-se-stats');const box=$('#cards');box.innerHTML='';
+  APPS.forEach(A=>box.append(card(A,A.id==='pismenka-ipad'?pismenkaStats():(all[A.id]||{}))));
+}
+
+/* ---------- Nastavení aplikací ---------- */
+const radio=(key,prop,def,opts,num)=>{
+  const cur=String(read(key)[prop]??def);const name=key+'.'+prop;
+  return `<div class="opts">${opts.map(([v,l])=>`<label><input type="radio" name="${name}" data-k="${key}" data-p="${prop}" data-num="${num?1:0}" value="${v}" ${cur===String(v)?'checked':''}> ${l}</label>`).join('')}</div>`;
+};
+function renderSettings(){
+  const sl=read('slabiky-v1');const rows=sl.rows||['m','l','v','t','s','j'];
+  $('#settings').innerHTML=`
+   <div class="field"><div><span class="appname">Na co začíná?</span><small>Jaká písmena se nabízí.</small></div>${radio('prvni-pismeno-v1','lower','false',[['false','Velká'],['true','Malá']])}</div>
+   <div class="field"><div><span class="appname">Poslouchej</span><small>Kolik slov uslyší.</small></div>${radio('poslouchej-v1','level','2',[['1','2 slova (ze 4)'],['2','3 slova (ze 6)'],['3','4 slova (ze 6)']])}</div>
+   <div class="field"><div><span class="appname">Spojovačka</span><small>Druh písmen.</small></div>${radio('spojovacka-v1','mode','print',[['print','A – a tiskací'],['cursive','<span class="cur">A – a</span> psací'],['mix','tiskací – <span class="cur">psací</span>']])}</div>
+   <div class="field"><div><small>Počet dvojic v jednom úkolu.</small></div>${radio('spojovacka-v1','pairs','3',[['3','3'],['4','4'],['5','5']],true)}</div>
+   <div class="field"><div><span class="appname">Skládej slova</span><small>Těžší = delší slova a písmena navíc.</small></div>${radio('skladani-slov-v1','level','1',[['1','Lehčí'],['2','Těžší']])}</div>
+   <div class="field"><div><span class="appname">Slabiky</span><small>Které řádky slabik jsou zapnuté.</small></div>
+     <div class="opts">${['m','l','v','t','s','j'].map(c=>`<label><input type="checkbox" class="row" value="${c}" ${rows.includes(c)?'checked':''}> ${c}</label>`).join('')}</div></div>
+   <div class="field"><div><small>Při skládání slov ze slabik.</small></div>${radio('slabiky-v1','level','1',[['1','Slovo je napsané'],['2','Jen obrázek a zvuk']])}</div>
+   <div class="field"><div><span class="appname">Písmenka</span><small>Mají vlastní nastavení uvnitř aplikace (podržet „Pro rodiče“).</small></div><a class="btn" href="../pismenka-ipad/">Otevřít Písmenka</a></div>`;
+}
+$('#settings').addEventListener('change',e=>{
+  const t=e.target;
+  if(t.type==='radio'){let v=t.value;if(v==='true'||v==='false')v=v==='true';else if(t.dataset.num==='1')v=+v;patch(t.dataset.k,{[t.dataset.p]:v})}
+  if(t.classList.contains('row')){
+    const rows=[...document.querySelectorAll('.row:checked')].map(x=>x.value);
+    if(!rows.length){t.checked=true;return}
+    patch('slabiky-v1',{rows});
+  }
+});
+
+/* ---------- Viditelnost na rozcestníku ---------- */
+function renderVisible(){
+  const hid=K.G.hidden||[];
+  $('#visible').innerHTML=APPS.map(A=>`<label><input type="checkbox" value="${A.id}" ${hid.includes(A.id)?'':'checked'}> ${A.name}</label>`).join('');
+}
+$('#visible').addEventListener('change',()=>{
+  K.G.hidden=[...document.querySelectorAll('#visible input:not(:checked)')].map(x=>x.value);K.G.save();
+});
+
+/* ---------- Hlas ---------- */
+const rate=$('#rate');rate.value=K.G.rate||1;
+rate.addEventListener('input',()=>{K.G.rate=+rate.value;K.G.save()});
+rate.addEventListener('change',()=>K.say('Takhle rychle budu mluvit.'));
+$('#testVoice').onclick=()=>K.say('Ahoj! Poslouchej: má, ma. Pusa. Výborně!');
+function voiceInfo(){
+  if(!('speechSynthesis' in window)){$('#voiceInfo').textContent='Tento prohlížeč neumí mluvit.';return}
+  const vs=speechSynthesis.getVoices().filter(v=>(v.lang||'').toLowerCase().startsWith('cs'));
+  const vi=$('#voiceInfo');
+  if(!vs.length){vi.textContent='Český hlas nebyl nalezen.';vi.classList.add('bad');return}
+  vi.classList.remove('bad');
+  const best=vs.find(v=>/enhanced|vylepš|premium|prémio/i.test(v.name));
+  vi.textContent='Hlas: '+(best||vs[0]).name+(best?' ✓':' – doporučuji stáhnout vylepšenou verzi (návod níže).');
+}
+if('speechSynthesis' in window)speechSynthesis.addEventListener('voiceschanged',voiceInfo);
+voiceInfo();setTimeout(voiceInfo,800);
+
+/* ---------- Data ---------- */
+let armed=false;const rs=$('#reset'),no=$('#resetNo');
+rs.onclick=()=>{
+  if(!armed){armed=true;rs.textContent='Opravdu vynulovat?';no.hidden=false;return}
+  try{localStorage.removeItem('ucime-se-stats')}catch(e){}
+  armed=false;rs.textContent='Vynulovat statistiky';no.hidden=true;renderCards();
+};
+no.onclick=()=>{armed=false;rs.textContent='Vynulovat statistiky';no.hidden=true};
+
+renderCards();renderSettings();renderVisible();
+addEventListener('pageshow',()=>{renderCards();renderSettings()});
+})();
+</script>
+</body>
+</html>

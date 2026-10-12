@@ -17,6 +17,18 @@ K.store = (key,def) => {
   return v;
 };
 
+/* ---------- Společné nastavení a statistiky (stránka Pro rodiče) ---------- */
+K.G = K.store('ucime-se-global',{rate:1,hidden:[]});
+const STATS='ucime-se-stats';
+K.app = location.pathname.split('/').filter(p=>p&&p!=='index.html').pop()||'';
+function statsEdit(fn){try{const all=JSON.parse(localStorage.getItem(STATS))||{};
+  const a=all[K.app]||(all[K.app]={rounds:0,ok:0,bad:0,last:0,items:{}});fn(a);a.last=Date.now();
+  localStorage.setItem(STATS,JSON.stringify(all))}catch(e){}}
+/* K.mark(true/false, položka) – zapíše správnou / chybnou odpověď */
+K.mark = (ok,item) => statsEdit(a=>{ok?a.ok++:a.bad++;
+  if(item!=null){const it=a.items[item]||(a.items[item]={ok:0,bad:0});ok?it.ok++:it.bad++}});
+K.markRound = () => statsEdit(a=>{a.rounds++});
+
 /* ---------- Písmena (stejné pořadí a názvy jako v Písmenkách) ---------- */
 K.LETTERS=[['A','a','a'],['E','e','e'],['I','i','i'],['O','o','o'],['U','u','u'],['M','m','em'],['L','l','el'],['S','s','es'],
  ['P','p','pé'],['T','t','té'],['J','j','jé'],['V','v','vé'],['D','d','dé'],['N','n','en'],['K','k','ká'],['Z','z','zet'],
@@ -72,7 +84,7 @@ K.say = (text,rate) => new Promise(res=>{
   try{
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(text);
-    u.lang='cs-CZ'; if(voice)u.voice=voice; u.rate=rate||0.85; u.pitch=1.05;
+    u.lang='cs-CZ'; if(voice)u.voice=voice; u.rate=Math.min(1.5,(rate||0.85)*(+K.G.rate||1)); u.pitch=1.05;
     let done=false; const fin=()=>{if(!done){done=true;res(my===sayToken)}};
     u.onend=fin; u.onerror=fin; setTimeout(fin,2500+text.length*95);
     speechSynthesis.speak(u);
@@ -190,7 +202,7 @@ K.round = (n,task) => {
   next();
 };
 function finish(){
-  K.repeat=null;
+  K.repeat=null;K.markRound();
   setTimeout(()=>{K.show('end');K.say('Hotovo! '+K.pick(K.PRAISE));
     for(let k=0;k<4;k++)setTimeout(()=>K.burst(innerWidth*(.2+.6*Math.random()),innerHeight*.45,60),k*260)},500);
 }

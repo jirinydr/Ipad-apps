@@ -1,8 +1,8 @@
 // Offline pro rozcestník a všechny nové aplikace (Písmenka mají vlastní service worker).
 // Při připojení se stránky vždy načtou nové (network-first), offline se použije uložená kopie.
 // Po změně souborů zvyš číslo verze.
-const CACHE = 'ucime-se-v3';
-const APPS = ['prvni-pismeno', 'poslouchej', 'spojovacka', 'skladani-slov', 'slabiky'];
+const CACHE = 'ucime-se-v7';
+const APPS = ['prvni-pismeno', 'poslouchej', 'spojovacka', 'skladani-slov', 'slabiky', 'rodice'];
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png',
   './shared/common.css', './shared/common.js', './shared/psaci.ttf',
   ...APPS.flatMap(a => ['./' + a + '/', './' + a + '/index.html'])];
@@ -27,6 +27,16 @@ self.addEventListener('fetch', e => {
         return r;
       } catch (err) {
         return (await c.match(e.request, {ignoreSearch: true})) || (await c.match('./index.html')) || Response.error();
+      }
+    }
+    // vlastní soubory: nejdřív síť (vždy nejnovější), offline uložená kopie; písma z Googlu: uložená kopie
+    if (url.origin === location.origin) {
+      try {
+        const r = await fetch(e.request, {cache: 'no-store'});
+        if (r && r.ok) c.put(e.request, r.clone());
+        return r;
+      } catch (err) {
+        return (await c.match(e.request, {ignoreSearch: true})) || Response.error();
       }
     }
     const hit = await c.match(e.request, {ignoreSearch: true});

@@ -55,6 +55,14 @@ const ROUND=5;
 
 function play(){K.round(ROUND,(i,done)=>task(done))}
 
+// Co zazní po spojení – celá věta, aby iPad neříkal „velké O“.
+function pairText(L){
+  const n=L.name;
+  if(S.mode==='mix')return 'Tiskací '+n+' a psací '+n+'.';
+  if(S.mode==='cursive')return 'Velké psací '+n+' a malé psací '+n+'.';
+  return 'Velké '+n+' a malé '+n+'.';
+}
+
 function task(done){
   const M=MODES[S.mode]||MODES.print, n=S.pairs||3;
   const pool=K.knownLetters(Math.max(n+3,8));
@@ -90,13 +98,14 @@ function task(done){
     if(!a||!b||a.dataset.side===b.dataset.side)return false;
     if(a.dataset.u===b.dataset.u){
       const l=line(anchor(a),anchor(b),'ok');
-      a.classList.add('done');b.classList.add('done');matched++;
+      a.classList.add('done');b.classList.add('done');matched++;K.mark(true,a.dataset.u);
       K.burstEl(b,30);
       const L=K.LETTERS.find(x=>x.u===a.dataset.u);
-      if(matched===n){K.say(L.name+'. '+K.pick(K.PRAISE)).then(done)}else K.say(L.name);
+      const t=pairText(L);
+      if(matched===n){K.say(t+' '+K.pick(K.PRAISE)).then(done)}else K.say(t);
     }else{
       const l=line(anchor(a),anchor(b),'bad');
-      [a,b].forEach(e=>{e.classList.remove('wrong');void e.offsetWidth;e.classList.add('wrong')});
+      K.mark(false,a.dataset.u);[a,b].forEach(e=>{e.classList.remove('wrong');void e.offsetWidth;e.classList.add('wrong')});
       setTimeout(()=>l.remove(),500);
       K.say('Ještě jednou.');
     }

@@ -117,8 +117,8 @@ function find(done){
   K.shuffle([...opts]).forEach((s,k)=>{
     const b=K.el('button','opt syl',s);b.style.setProperty('--c',COLS[k]);
     b.onclick=async()=>{if(solved)return;
-      if(s===target){solved=true;b.classList.add('right');K.success(b);await K.say(s,0.75);K.praise();done()}
-      else{b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
+      if(s===target){solved=true;K.mark(true,target);b.classList.add('right');K.success(b);await K.say(s,0.75);K.praise().then(done)}
+      else{K.mark(false,target);b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
         await K.say('To je '+s+'.',0.8);K.say('Najdi '+target+'.',0.8)}
     };
     tiles.append(b);
@@ -149,9 +149,10 @@ function build(W,done){
       if(pos>=W.s.length)return;
       if(s===W.s[pos]){
         const sl=slots.children[pos];sl.textContent=s;sl.classList.add('full');pos++;mark();
-        if(pos===W.s.length){slots.classList.add('win');K.success(slots);K.say(W.w+'! '+K.pick(K.PRAISE)).then(done)}
+        if(pos===W.s.length){K.mark(true,W.w);slots.classList.add('win');K.success(slots);
+          K.say(s,0.75).then(()=>K.wait(300)).then(()=>K.say(W.w+'! '+K.pick(K.PRAISE))).then(done)}
         else K.say(s,0.75);
-      }else{b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');K.say(s+'? Ne, zkus jinou.',0.8)}
+      }else{K.mark(false,W.w);b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');K.say(s+'? Ne, zkus jinou.',0.8)}
     };
     tiles.append(b);
   });

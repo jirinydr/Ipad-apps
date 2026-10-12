@@ -76,10 +76,11 @@ function task(done){
       if(!ready)return;
       if(heard.includes(w)){
         b.classList.add('right');count.children[found].classList.add('on');found++;
-        if(found===heard.length){K.success(grid);ready=false;K.praise().then(done)}
+        if(found===heard.length){K.success(grid);ready=false;K.mark(true,heard.map(x=>x.w).join(', '));
+          K.say(w.w).then(()=>K.wait(300)).then(()=>K.praise()).then(done)}
         else K.say(w.w);
       }else{
-        b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
+        K.mark(false,w.w);b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
         K.say('Tohle tam nebylo.');
       }
     };

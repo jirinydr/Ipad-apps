@@ -71,12 +71,12 @@ function task(W,done){
       if(pos>=chars.length)return;
       if(c===chars[pos]){
         const s=slots.children[pos];s.textContent=c;s.classList.add('full');b.classList.add('used');pos++;mark();
-        if(pos===chars.length){
+        if(pos===chars.length){K.mark(true,W.w);
           slots.classList.add('win');K.success(slots);
-          K.say(W.w+'! '+K.pick(K.PRAISE)).then(done);
-        }else K.say(K.letterName(c));
+          K.say('Písmeno '+K.letterName(c)+'.').then(()=>K.wait(300)).then(()=>K.say(W.w+'! '+K.pick(K.PRAISE))).then(done);
+        }else K.say('Písmeno '+K.letterName(c)+'.');
       }else{
-        b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
+        K.mark(false,W.w);b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
         K.say(pos===0?'Které písmenko je první?':'Které písmenko je teď?');
       }
     };
