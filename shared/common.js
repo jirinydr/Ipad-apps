@@ -18,7 +18,7 @@ K.store = (key,def) => {
 };
 
 /* ---------- Písmena (stejné pořadí a názvy jako v Písmenkách) ---------- */
-K.LETTERS=[['A','a','A'],['E','e','E'],['I','i','I'],['O','o','O'],['U','u','U'],['M','m','em'],['L','l','el'],['S','s','es'],
+K.LETTERS=[['A','a','a'],['E','e','e'],['I','i','i'],['O','o','o'],['U','u','u'],['M','m','em'],['L','l','el'],['S','s','es'],
  ['P','p','pé'],['T','t','té'],['J','j','jé'],['V','v','vé'],['D','d','dé'],['N','n','en'],['K','k','ká'],['Z','z','zet'],
  ['B','b','bé'],['R','r','er'],['H','h','há'],['C','c','cé']].map(([u,l,name])=>({u,l,name}));
 const NAMES={}; K.LETTERS.forEach(L=>NAMES[L.l]=L.name);
