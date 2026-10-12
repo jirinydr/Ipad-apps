@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Spojovačka</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+.board{position:relative;display:flex;justify-content:center;gap:clamp(90px,24vw,300px);touch-action:none}
+.col{display:flex;flex-direction:column;gap:clamp(12px,2.6vh,28px);position:relative;z-index:2}
+.board{--t:clamp(80px,min(19vw,var(--fit)),160px)}
+.lt{--c:var(--t2);width:var(--t);aspect-ratio:1;border:0;border-radius:26px;background:var(--surface);box-shadow:0 7px 0 var(--c);
+  font-family:var(--font-letter);font-weight:700;font-size:calc(var(--t)*.62);line-height:1;display:grid;place-items:center;padding:0;
+  transition:transform .1s,background .2s;touch-action:none}
+.lt.cursive{font-family:var(--font-cursive);font-weight:400;font-size:calc(var(--t)*.66);line-height:1.3;-webkit-text-stroke:.025em currentColor}
+.lt.sel{transform:scale(1.08);box-shadow:0 0 0 6px var(--t3),0 7px 0 var(--c)}
+.lt.done{background:var(--ok-soft);box-shadow:0 7px 0 var(--ok);pointer-events:none}
+.lt.wrong{animation:shake .4s ease}
+.lines{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}
+.lines line{stroke-width:12;stroke-linecap:round}
+.lines .live{stroke:var(--t3);stroke-dasharray:2 20}
+.lines .ok{stroke:var(--ok)}
+.lines .bad{stroke:var(--no)}
+.seg .cur{font-family:var(--font-cursive);font-weight:400;font-size:1.45em;line-height:1}
+</style>
+</head>
+<body>
+<script src="../shared/common.js"></script>
+<script>
+(function(){
+"use strict";
+const S=K.store('spojovacka-v1',{mode:'print',pairs:3});
+// Režimy: levý sloupec → pravý sloupec
+const MODES={
+  print:{l:L=>L.u,r:L=>L.l,lc:false,rc:false},          // A – a
+  cursive:{l:L=>L.u,r:L=>L.l,lc:true,rc:true},          // psací A – a
+  mix:{l:L=>L.l,r:L=>L.l,lc:false,rc:true}              // tiskací a – psací a
+};
+K.shell({
+  title:'Spojovačka',
+  controls:`${K.segHTML('modeSeg',[['print','A – a'],['cursive','<span class="cur">A – a</span>'],['mix','a – <span class="cur">a</span>']])}
+    ${K.segHTML('pairSeg',[['3','3 dvojice'],['4','4 dvojice'],['5','5 dvojic']])}
+    <p class="note">Spoj prstem stejná písmenka. Nebo ťukni na jedno a pak na jeho kamaráda.</p>`,
+  onPlay:play
+});
+K.bindSeg('modeSeg',()=>S.mode,v=>{S.mode=v;S.save()});
+K.bindSeg('pairSeg',()=>S.pairs,v=>{S.pairs=+v;S.save()});
+const ROUND=5;
+
+function play(){K.round(ROUND,(i,done)=>task(done))}
+
+function task(done){
+  const M=MODES[S.mode]||MODES.print, n=S.pairs||3;
+  const pool=K.knownLetters(Math.max(n+3,8));
+  const set=K.sample(pool,n);
+  const st=K.$('#stage');
+  const board=K.el('div','board');
+  board.style.setProperty('--fit',`calc((100vh - 220px) / ${n} - 30px)`);
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','lines');
+  const left=K.el('div','col'),right=K.el('div','col');
+  const cols=['var(--t1)','var(--t2)','var(--t3)','var(--t4)','var(--sun)'];
+  const mk=(L,side,k)=>{
+    const cur=side==='l'?M.lc:M.rc;
+    const b=K.el('button','lt'+(cur?' cursive':''),side==='l'?M.l(L):M.r(L));
+    b.dataset.u=L.u;b.dataset.side=side;b.style.setProperty('--c',cols[k%cols.length]);
+    return b;
+  };
+  set.forEach((L,k)=>left.append(mk(L,'l',k)));
+  K.shuffle(set.slice()).forEach((L,k)=>right.append(mk(L,'r',k+2)));
+  board.append(svg,left,right);st.append(board);
+  K.hint('Spoj stejná písmenka.');
+  K.repeat=()=>K.say('Spoj stejná písmenka.');
+  K.repeat();
+
+  let matched=0, sel=null, live=null, startEl=null, moved=false;
+  const center=(el,side)=>{const b=board.getBoundingClientRect(),r=el.getBoundingClientRect();
+    return {x:(side==='l'?r.right-6:side==='r'?r.left+6:r.left+r.width/2)-b.left,y:r.top+r.height/2-b.top}};
+  const line=(a,b,cls)=>{const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',a.x);l.setAttribute('y1',a.y);l.setAttribute('x2',b.x);l.setAttribute('y2',b.y);l.setAttribute('class',cls);svg.append(l);return l};
+  const anchor=el=>center(el,el.dataset.side);
+  const clearSel=()=>{if(sel)sel.classList.remove('sel');sel=null};
+
+  function tryPair(a,b){
+    if(!a||!b||a.dataset.side===b.dataset.side)return false;
+    if(a.dataset.u===b.dataset.u){
+      const l=line(anchor(a),anchor(b),'ok');
+      a.classList.add('done');b.classList.add('done');matched++;
+      K.burstEl(b,30);
+      const L=K.LETTERS.find(x=>x.u===a.dataset.u);
+      if(matched===n){K.say(L.name+'. '+K.pick(K.PRAISE)).then(done)}else K.say(L.name);
+    }else{
+      const l=line(anchor(a),anchor(b),'bad');
+      [a,b].forEach(e=>{e.classList.remove('wrong');void e.offsetWidth;e.classList.add('wrong')});
+      setTimeout(()=>l.remove(),500);
+      K.say('Ještě jednou.');
+    }
+    return true;
+  }
+
+  board.addEventListener('pointerdown',e=>{
+    const t=e.target.closest('.lt');if(!t||t.classList.contains('done'))return;
+    e.preventDefault();
+    // druhé ťuknutí při výběru ťukáním
+    if(sel&&sel!==t&&sel.dataset.side!==t.dataset.side){const a=sel;clearSel();tryPair(a,t);return}
+    clearSel();
+    startEl=t;moved=false;t.classList.add('sel');
+    const p=anchor(t);live=line(p,p,'live');
+  });
+  board.addEventListener('pointermove',e=>{
+    if(!startEl||!live)return;
+    const b=board.getBoundingClientRect();moved=true;
+    live.setAttribute('x2',e.clientX-b.left);live.setAttribute('y2',e.clientY-b.top);
+  });
+  const up=e=>{
+    if(!startEl)return;
+    const a=startEl;startEl=null;if(live){live.remove();live=null}
+    const hit=document.elementFromPoint(e.clientX,e.clientY);const t=hit&&hit.closest('.lt');
+    if(t&&t!==a&&!t.classList.contains('done')&&t.dataset.side!==a.dataset.side){a.classList.remove('sel');tryPair(a,t);return}
+    if(t===a||!moved){sel=a;return}          // jen ťuknutí → čeká na druhé písmeno
+    a.classList.remove('sel');
+  };
+  board.addEventListener('pointerup',up);
+  board.addEventListener('pointercancel',()=>{startEl=null;if(live){live.remove();live=null}clearSel()});
+}
+})();
+</script>
+</body>
+</html>

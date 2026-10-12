@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Poslouchej</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+.pics{display:grid;grid-template-columns:repeat(var(--cols,3),var(--pic));gap:clamp(12px,2.4vw,26px);justify-content:center}
+.pics{--pic:clamp(96px,min(26vw,21vh),210px)}
+.pics.four{--cols:2;--pic:clamp(110px,min(32vw,27vh),240px)}
+.pc{width:var(--pic);aspect-ratio:1;border:0;border-radius:30px;background:var(--surface);box-shadow:0 7px 0 var(--line);
+  display:grid;place-items:center;position:relative;transition:transform .1s}
+.pc .emoji{font-size:calc(var(--pic)*.6)}
+.pc:active{transform:translateY(5px);box-shadow:0 2px 0 var(--line)}
+.pc.right{background:var(--ok-soft);box-shadow:0 0 0 6px var(--ok),0 7px 0 var(--ok);animation:pop .5s ease;pointer-events:none}
+.pc.right::after{content:"✓";position:absolute;right:10px;top:4px;font-size:calc(var(--pic)*.22);font-weight:800;color:var(--ok)}
+.pc.wrong{animation:shake .4s ease}
+.ear{width:clamp(80px,12vmin,120px);aspect-ratio:1;border-radius:50%;border:0;background:var(--sun);box-shadow:0 7px 0 var(--sun-deep);display:grid;place-items:center}
+.ear svg{width:55%;height:55%}
+.ear:active{transform:translateY(5px);box-shadow:0 2px 0 var(--sun-deep)}
+.ear.talking svg{animation:wave 1s ease-in-out infinite}
+.count{display:flex;gap:10px}
+.count i{width:22px;height:22px;border-radius:50%;background:var(--surface);border:3px solid var(--line)}
+.count i.on{background:var(--ok);border-color:var(--ok)}
+</style>
+</head>
+<body>
+<script src="../shared/common.js"></script>
+<script>
+(function(){
+"use strict";
+const S=K.store('poslouchej-v1',{level:'2'});
+const LEVELS={'1':{say:2,show:4},'2':{say:3,show:6},'3':{say:4,show:6}};
+K.shell({
+  title:'Poslouchej',
+  controls:`<p class="seg-label">Kolik slov uslyšíš</p>${K.segHTML('lvl',[['1','2 slova'],['2','3 slova'],['3','4 slova']])}
+    <p class="note">Poslouchej pozorně a pak ukaž všechny obrázky, které jsi slyšela.</p>`,
+  onPlay:play
+});
+K.bindSeg('lvl',()=>S.level,v=>{S.level=v;S.save()});
+
+const GROUPS={};
+K.WORDS.forEach(w=>{if(w.g!=='lidé'&&w.g!=='slabiky')(GROUPS[w.g]=GROUPS[w.g]||[]).push(w)});
+const EAR='<svg viewBox="0 0 24 24" fill="none" stroke="#22394A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="#FFFFFF"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
+const ROUND=6;
+
+function play(){K.round(ROUND,(i,done)=>task(done))}
+
+async function speakList(list,btn){
+  if(btn)btn.classList.add('talking');
+  await K.say('Poslouchej.');
+  for(const w of list){if(!(await K.say(w.w,0.8)))break;await K.wait(350)}
+  if(btn)btn.classList.remove('talking');
+}
+
+function task(done){
+  const L=LEVELS[S.level]||LEVELS['2'];
+  const g=K.pick(Object.keys(GROUPS).filter(k=>GROUPS[k].length>=L.show));
+  const shown=K.sample(GROUPS[g],L.show);
+  const heard=K.sample(shown,L.say);
+  const st=K.$('#stage');
+  const ear=K.el('button','ear',EAR);ear.setAttribute('aria-label','Poslechnout znovu');
+  const count=K.el('div','count');heard.forEach(()=>count.append(K.el('i')));
+  const grid=K.el('div','pics'+(L.show===4?' four':''));
+  let found=0, ready=false;
+  shown.forEach(w=>{
+    const b=K.el('button','pc','<span class="emoji">'+w.e+'</span>');b.setAttribute('aria-label',w.w);
+    b.onclick=()=>{
+      if(!ready)return;
+      if(heard.includes(w)){
+        b.classList.add('right');count.children[found].classList.add('on');found++;
+        if(found===heard.length){K.success(grid);ready=false;K.praise().then(done)}
+        else K.say(w.w);
+      }else{
+        b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
+        K.say('Tohle tam nebylo.');
+      }
+    };
+    grid.append(b);
+  });
+  st.append(ear,count,grid);
+  K.hint('Ukaž všechno, co jsi slyšela.');
+  K.repeat=()=>speakList(heard);
+  ear.onclick=()=>speakList(heard,ear);
+  ready=true;
+  speakList(heard,ear);
+}
+})();
+</script>
+</body>
+</html>

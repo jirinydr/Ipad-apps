@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Učíme se">
+<meta name="theme-color" content="#E4F1EE">
+<title>Učíme se</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="shared/common.css">
+<style>
+body{overflow-y:auto}
+.hub{min-height:100%;max-width:1100px;margin:0 auto;padding:clamp(20px,4vh,48px) 16px 40px;display:flex;flex-direction:column;align-items:center;gap:clamp(18px,4vh,40px)}
+.grid{width:100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:clamp(14px,2.6vw,28px)}
+.app-card{--c:var(--t1);background:var(--surface);border-radius:32px;box-shadow:0 8px 0 var(--c);padding:22px 18px 18px;
+  display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;transition:transform .1s,box-shadow .1s}
+.app-card:active{transform:translateY(6px);box-shadow:0 2px 0 var(--c)}
+.sym{height:clamp(90px,13vh,130px);display:grid;place-items:center;font-family:var(--font-letter);font-weight:700;line-height:1}
+.sym .big{font-size:clamp(70px,10vh,104px)}
+.sym .emoji{font-size:clamp(70px,10vh,100px)}
+.sym .cur{font-family:var(--font-cursive);font-weight:400}
+.mini{display:flex;gap:6px}
+.mini b{width:clamp(38px,5.4vh,52px);aspect-ratio:1;border-radius:12px;background:var(--bg);display:grid;place-items:center;font-size:clamp(28px,4vh,38px)}
+.badge{position:relative}
+.badge i{position:absolute;right:-14px;bottom:-6px;font-style:normal;background:var(--sun);color:var(--ink);border-radius:16px;
+  font-size:clamp(30px,4.4vh,42px);width:1.4em;aspect-ratio:1;display:grid;place-items:center;box-shadow:0 4px 0 var(--sun-deep)}
+.name{font-weight:800;font-size:clamp(26px,3.6vh,34px);line-height:1.05;margin:0}
+.desc{font-family:var(--font-letter);color:var(--muted);font-size:15px;line-height:1.35;margin:0;max-width:30ch}
+</style>
+</head>
+<body>
+<main class="hub">
+  <h1 class="logo" aria-label="Učíme se"><span>U</span><span>č</span><span>í</span><span>m</span><span>e</span><span class="sp"></span><span>s</span><span>e</span></h1>
+  <nav class="grid">
+    <a class="app-card" href="pismenka-ipad/" style="--c:var(--t1)">
+      <div class="sym"><span class="big"><span style="color:var(--t1)">A</span><span style="color:var(--t2)">a</span></span></div>
+      <p class="name">Písmenka</p><p class="desc">Poznávání písmen, poslech, obtahování, psací a tiskací.</p>
+    </a>
+    <a class="app-card" href="prvni-pismeno/" style="--c:var(--t2)">
+      <div class="sym"><span class="badge"><span class="emoji">🐍</span><i>H</i></span></div>
+      <p class="name">Na co začíná?</p><p class="desc">Obrázek a výběr prvního písmene slova.</p>
+    </a>
+    <a class="app-card" href="poslouchej/" style="--c:var(--t3)">
+      <div class="sym"><span class="emoji">👂</span></div>
+      <p class="name">Poslouchej</p><p class="desc">Zapamatuj si slova a ukaž obrázky, které zazněly.</p>
+    </a>
+    <a class="app-card" href="spojovacka/" style="--c:var(--t4)">
+      <div class="sym"><span class="big"><span style="color:var(--t4)">A</span><span style="color:var(--muted);font-size:.5em"> — </span><span class="cur" style="color:var(--t1);font-size:.7em">a</span></span></div>
+      <p class="name">Spojovačka</p><p class="desc">Spoj velké a malé písmeno, tiskací i psací.</p>
+    </a>
+    <a class="app-card" href="skladani-slov/" style="--c:var(--sun)">
+      <div class="sym"><div class="mini"><b style="color:var(--t1)">b</b><b style="color:var(--t2)">o</b><b style="color:var(--t3)">t</b><b style="color:var(--t4)">a</b></div></div>
+      <p class="name">Skládej slova</p><p class="desc">Slož slovo z písmenek ve správném pořadí.</p>
+    </a>
+    <a class="app-card" href="slabiky/" style="--c:var(--t1)">
+      <div class="sym"><div class="mini"><b style="width:auto;padding:0 .3em;color:var(--t2)">ma</b><b style="width:auto;padding:0 .3em;color:var(--t3)">má</b></div></div>
+      <p class="name">Slabiky</p><p class="desc">Slabikář, krátké a dlouhé slabiky, skládání slov.</p>
+    </a>
+  </nav>
+</main>
+<script>
+if('serviceWorker' in navigator && location.protocol!=='file:'){
+  addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Skládej slova</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+.top{display:flex;align-items:center;gap:clamp(16px,4vw,40px)}
+.picture{width:clamp(110px,min(24vw,19vh),200px)}
+.picture .emoji{font-size:calc(clamp(110px,min(24vw,19vh),200px)*.62)}
+.slots{display:flex;gap:clamp(8px,1.6vw,16px);justify-content:center}
+.slot{--s:clamp(64px,min(15vw,12vh),130px);width:var(--s);aspect-ratio:1;border-radius:22px;border:4px dashed var(--line);
+  display:grid;place-items:center;font-family:var(--font-letter);font-weight:700;font-size:calc(var(--s)*.62);line-height:1;background:transparent}
+.slot.next{border-color:var(--sun)}
+.slot.full{border:0;background:var(--surface);box-shadow:0 6px 0 var(--ok);animation:pop .4s ease}
+.slots.win .slot{background:var(--ok-soft)}
+.tiles{max-width:min(100%,900px)}
+.board{--tile:clamp(64px,min(15vw,12vh),130px)}
+</style>
+</head>
+<body>
+<script src="../shared/common.js"></script>
+<script>
+(function(){
+"use strict";
+const S=K.store('skladani-slov-v1',{level:'1'});
+K.shell({
+  title:'Skládej slova',
+  controls:`${K.segHTML('lvl',[['1','Lehčí'],['2','Těžší']])}
+    <p class="note">Lehčí: jen písmenka ze slova. Těžší: delší slova a navíc pár písmenek, která do slova nepatří.</p>`,
+  onPlay:play
+});
+K.bindSeg('lvl',()=>S.level,v=>{S.level=v;S.save()});
+
+// Lehčí: 3–4 písmena bez háčků a čárek. Těžší: 4–6 písmen, i s diakritikou.
+const EASY=['bota','auto','lama','sova','ryba','koza','kolo','ruka','noha','pusa','voda','dort','pes','les','lev','nos','oko','had','med','vlak','list','drak','mrak','slon','zub','lupa','mapa','tygr','krab','kost','vlna'];
+const HARD=['máma','táta','myš','sýr','dům','loď','míč','robot','zebra','banán','raketa','jablko','jahoda','kočka','kráva','houba','hruška','balón','citrón','slunce','strom','opice','ovce','tužka','kniha','sníh','pták','ježek','duha','hrad'];
+const FILL='aeioumlsptjvdnkzbrh'.split('');
+const ROUND=6;
+
+function play(){
+  const list=K.sample(S.level==='2'?HARD:EASY,ROUND);
+  K.round(ROUND,(i,done)=>task(K.word(list[i]),done));
+}
+
+function task(W,done){
+  const chars=[...W.w];
+  let extra=[];
+  if(S.level==='2'){const pool=FILL.filter(c=>!chars.includes(c));extra=K.sample(pool,Math.max(2,7-chars.length))}
+  const st=K.$('#stage');st.classList.add('board');
+  const top=K.el('div','top');
+  const pic=K.el('button','card picture','<span class="emoji">'+W.e+'</span>');
+  const model=K.el('p','word',W.w);
+  top.append(pic,model);
+  const slots=K.el('div','slots');
+  chars.forEach(()=>slots.append(K.el('div','slot')));
+  const tiles=K.el('div','tiles');
+  const cols=['var(--t1)','var(--t2)','var(--t3)','var(--t4)'];
+  let pos=0;
+  const mark=()=>[...slots.children].forEach((s,k)=>s.classList.toggle('next',k===pos));
+  K.shuffle([...chars,...extra]).forEach((c,k)=>{
+    const b=K.el('button','opt',c);b.style.setProperty('--c',cols[k%4]);
+    b.onclick=()=>{
+      if(pos>=chars.length)return;
+      if(c===chars[pos]){
+        const s=slots.children[pos];s.textContent=c;s.classList.add('full');b.classList.add('used');pos++;mark();
+        if(pos===chars.length){
+          slots.classList.add('win');K.success(slots);
+          K.say(W.w+'! '+K.pick(K.PRAISE)).then(done);
+        }else K.say(K.letterName(c));
+      }else{
+        b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
+        K.say(pos===0?'Které písmenko je první?':'Které písmenko je teď?');
+      }
+    };
+    tiles.append(b);
+  });
+  mark();
+  pic.onclick=()=>K.say(W.w);
+  st.append(top,slots,tiles);
+  K.hint('Slož slovo z písmenek.');
+  K.repeat=()=>K.say('Slož slovo '+W.w+'.');
+  K.repeat();
+}
+})();
+</script>
+</body>
+</html>

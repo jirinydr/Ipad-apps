@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Na co začíná?</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+.word{visibility:hidden}
+.word.on{visibility:visible;animation:pop .5s ease}
+</style>
+</head>
+<body>
+<script src="../shared/common.js"></script>
+<script>
+(function(){
+"use strict";
+const S=K.store('prvni-pismeno-v1',{lower:false});
+K.shell({
+  title:'Na co začíná?',
+  controls:`<p class="seg-label">Písmena na výběr</p>${K.segHTML('caseSeg',[['0','A B C'],['1','a b c']])}
+    <p class="note">Podívej se na obrázek a najdi písmeno, na které slovo začíná.</p>`,
+  onPlay:play
+});
+K.bindSeg('caseSeg',()=>S.lower?'1':'0',v=>{S.lower=v==='1';S.save()});
+
+const ALLOWED=new Set(K.LETTERS.map(L=>L.l));
+const POOL=K.WORDS.filter(x=>ALLOWED.has(x.w[0])&&!/^ch/.test(x.w)&&x.g!=='lidé'&&x.g!=='slabiky');
+const ROUND=8;
+
+function play(){
+  const words=[];const used=new Set();
+  while(words.length<ROUND){                 // pokaždé jiné první písmeno, ať to není jednotvárné
+    const w=K.pick(POOL);if(used.has(w.w[0])&&used.size<ALLOWED.size-2)continue;
+    if(words.some(x=>x.w===w.w))continue;used.add(w.w[0]);words.push(w);
+  }
+  K.round(ROUND,(i,done)=>task(words[i],done));
+}
+
+function task(W,done){
+  const first=W.w[0];
+  const letters=[...new Set(POOL.map(x=>x.w[0]))].filter(c=>c!==first);
+  const choices=K.shuffle([first,...K.sample(letters,3)]);
+  const st=K.$('#stage');
+  const pic=K.el('button','card picture','<span class="emoji">'+W.e+'</span>');pic.setAttribute('aria-label','Obrázek – poslechnout slovo');
+  const word=K.el('p','word','<span class="first">'+W.w[0]+'</span>'+W.w.slice(1));
+  const tiles=K.el('div','tiles');
+  const cols=['var(--t1)','var(--t2)','var(--t3)','var(--t4)'];
+  let solved=false;
+  choices.forEach((c,k)=>{
+    const b=K.el('button','opt',S.lower?c:c.toUpperCase());b.style.setProperty('--c',cols[k]);
+    b.onclick=async()=>{
+      if(solved)return;
+      if(c===first){
+        solved=true;b.classList.add('right');word.classList.add('on');K.success(b);
+        const n=K.letterName(c);
+        await K.say(n+', '+n+' jako '+W.w+'.');
+        K.praise();done();
+      }else{
+        b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
+        K.say('To je '+K.letterName(c)+'. Zkus to znovu.');
+      }
+    };
+    tiles.append(b);
+  });
+  pic.onclick=()=>K.say(W.w);
+  st.append(pic,word,tiles);
+  K.hint('Na jaké písmeno začíná?');
+  K.repeat=()=>K.say('Na co začíná slovo '+W.w+'?');
+  K.repeat();
+}
+})();
+</script>
+</body>
+</html>

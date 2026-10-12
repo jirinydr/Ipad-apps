@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Slabiky</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+.rows button{min-width:64px;font-family:var(--font-letter);font-size:clamp(24px,3.6vmin,32px)}
+/* Slabikář */
+.book{flex:1;min-height:0;width:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:14px;padding:6px 4px 30px;align-items:center}
+.brow{display:grid;grid-template-columns:repeat(5,var(--b));gap:clamp(8px,1.6vw,14px);--b:clamp(58px,min(14vw,9.5vh),120px)}
+.brow.long{margin-bottom:10px}
+.sy{--c:var(--t2);width:var(--b);aspect-ratio:1.15;border:0;border-radius:20px;background:var(--surface);box-shadow:0 6px 0 var(--c);
+  font-family:var(--font-letter);font-weight:700;font-size:calc(var(--b)*.42);line-height:1;padding:0;display:grid;place-items:center}
+.sy:active{transform:translateY(5px);box-shadow:0 1px 0 var(--c)}
+.sy.say{background:#FDEFD2}
+/* Kartičky slabik v úkolech */
+.opt.syl{width:auto;min-width:var(--tile);aspect-ratio:auto;height:var(--tile);padding:0 .25em;font-size:calc(var(--tile)*.46)}
+.top{display:flex;align-items:center;gap:clamp(16px,4vw,40px)}
+.picture{width:clamp(110px,min(24vw,19vh),200px)}
+.picture .emoji{font-size:calc(clamp(110px,min(24vw,19vh),200px)*.62)}
+.slots{display:flex;gap:clamp(10px,2vw,20px);justify-content:center}
+.slot{--s:clamp(70px,min(15vw,12vh),130px);min-width:calc(var(--s)*1.5);height:var(--s);border-radius:22px;border:4px dashed var(--line);
+  display:grid;place-items:center;font-family:var(--font-letter);font-weight:700;font-size:calc(var(--s)*.48);line-height:1;padding:0 .2em}
+.slot.next{border-color:var(--sun)}
+.slot.full{border:0;background:var(--surface);box-shadow:0 6px 0 var(--ok);animation:pop .4s ease}
+.slots.win .slot{background:var(--ok-soft)}
+.ear{width:clamp(130px,min(30vw,24vh),230px);aspect-ratio:1;border-radius:50%;border:0;background:var(--sun);box-shadow:0 8px 0 var(--sun-deep);display:grid;place-items:center}
+.ear svg{width:50%;height:50%}
+.ear:active{transform:translateY(6px);box-shadow:0 2px 0 var(--sun-deep)}
+.ear.talking svg{animation:wave 1s ease-in-out infinite}
+</style>
+</head>
+<body>
+<script src="../shared/common.js"></script>
+<script>
+(function(){
+"use strict";
+const CONS=['m','l','v','t','s','j'];
+const SHORT=['a','e','i','o','u'],LONG=['á','é','í','ó','ú'];
+const S=K.store('slabiky-v1',{act:'book',rows:CONS.slice(),level:'1'});
+K.shell({
+  title:'Slabiky',
+  controls:`${K.segHTML('actSeg',[['book','Slabikář'],['find','Najdi slabiku'],['build','Skládej slova']])}
+    <p class="seg-label">Které řádky</p>
+    <div class="seg rows" id="rowsSeg">${CONS.map(c=>`<button data-v="${c}" aria-pressed="false">${c}</button>`).join('')}</div>
+    <div id="lvlBox" style="display:flex;flex-direction:column;align-items:center;gap:18px">
+      ${K.segHTML('lvlSeg',[['1','Se slovem'],['2','Jen obrázek']])}
+    </div>
+    <p class="note" id="actNote"></p>`,
+  onPlay:play
+});
+const NOTES={book:'Ťukni na slabiku a uslyšíš ji. Krátká nahoře, dlouhá pod ní.',
+  find:'Poslouchej slabiku a najdi ji. Pozor na krátkou a dlouhou!',
+  build:'Slož slovo ze slabik.'};
+function syncAct(){K.$('#lvlBox').style.display=S.act==='build'?'flex':'none';K.$('#actNote').textContent=NOTES[S.act]}
+K.bindSeg('actSeg',()=>S.act,v=>{S.act=v;S.save();syncAct()});
+K.bindSeg('lvlSeg',()=>S.level,v=>{S.level=v;S.save()});
+syncAct();
+const rowsBox=K.$('#rowsSeg');
+const syncRows=()=>rowsBox.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(S.rows.includes(b.dataset.v))));
+rowsBox.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const c=b.dataset.v;
+  if(S.rows.includes(c)){if(S.rows.length>1)S.rows=S.rows.filter(x=>x!==c)}else S.rows=CONS.filter(x=>x===c||S.rows.includes(x));
+  S.save();syncRows()});
+syncRows();
+
+const WORDS=[['máma','má','ma'],['táta','tá','ta'],['lama','la','ma'],['sova','so','va'],['mísa','mí','sa'],['máta','má','ta'],
+  ['láva','lá','va'],['vila','vi','la'],['sele','se','le'],['tele','te','le'],['jojo','jo','jo'],['jáma','já','ma']]
+  .map(([w,...s])=>({w,s,e:K.word(w).e}));
+const partner=sy=>{const v=sy.slice(1),i=SHORT.indexOf(v),j=LONG.indexOf(v);return sy[0]+(i>=0?LONG[i]:SHORT[j])};
+const rowsSyl=()=>S.rows.flatMap(c=>[...SHORT,...LONG].map(v=>c+v));
+const EAR='<svg viewBox="0 0 24 24" fill="none" stroke="#22394A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="#FFFFFF"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
+const COLS=['var(--t1)','var(--t2)','var(--t3)','var(--t4)','var(--sun)','var(--t2)'];
+
+function play(){
+  if(S.act==='book')return book();
+  if(S.act==='find')return K.round(10,(i,done)=>find(done));
+  let pool=WORDS.filter(W=>W.s.every(s=>S.rows.includes(s[0])));
+  if(pool.length<3)pool=WORDS;                 // málo slov z vybraných řádků → vezmi všechna
+  const list=K.shuffle(pool.slice());while(list.length<6)list.push(K.pick(pool));
+  K.round(6,(i,done)=>build(list[i],done));
+}
+
+/* ---------- Slabikář: tabulka k prohlížení ---------- */
+function book(){
+  K.$('#dots').innerHTML='';K.show('game');K.hint('Ťukni na slabiku.');
+  const st=K.$('#stage');st.innerHTML='';
+  const bk=K.el('div','book');
+  S.rows.forEach((c,ri)=>{
+    [SHORT,LONG].forEach((vs,li)=>{
+      const r=K.el('div','brow'+(li?' long':''));
+      vs.forEach(v=>{const b=K.el('button','sy',c+v);b.style.setProperty('--c',COLS[ri%COLS.length]);
+        b.onclick=()=>{b.classList.add('say');K.say(c+v,0.75).then(()=>b.classList.remove('say'))};r.append(b)});
+      bk.append(r);
+    });
+  });
+  st.append(bk);
+  K.repeat=()=>K.say('Ťukni na slabiku a poslouchej.');
+}
+
+/* ---------- Najdi slabiku: poslech, krátká × dlouhá ---------- */
+function find(done){
+  const all=rowsSyl();const target=K.pick(all);
+  const opts=new Set([target,partner(target)]);
+  const same=all.filter(s=>s[0]===target[0]&&!opts.has(s));opts.add(K.pick(same));
+  const other=all.filter(s=>!opts.has(s));opts.add(K.pick(other));
+  const st=K.$('#stage');
+  const ear=K.el('button','ear',EAR);ear.setAttribute('aria-label','Poslechnout znovu');
+  const tiles=K.el('div','tiles');let solved=false;
+  K.shuffle([...opts]).forEach((s,k)=>{
+    const b=K.el('button','opt syl',s);b.style.setProperty('--c',COLS[k]);
+    b.onclick=async()=>{if(solved)return;
+      if(s===target){solved=true;b.classList.add('right');K.success(b);await K.say(s,0.75);K.praise();done()}
+      else{b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');
+        await K.say('To je '+s+'.',0.8);K.say('Najdi '+target+'.',0.8)}
+    };
+    tiles.append(b);
+  });
+  const speak=()=>{ear.classList.add('talking');return K.say('Najdi slabiku '+target+'.',0.8).then(()=>ear.classList.remove('talking'))};
+  ear.onclick=speak;K.repeat=speak;
+  st.append(ear,tiles);K.hint('Kterou slabiku slyšíš?');
+  speak();
+}
+
+/* ---------- Skládej slova ze slabik ---------- */
+function build(W,done){
+  const need=[...new Set(W.s)];
+  const opts=new Set(need);
+  need.forEach(s=>opts.add(partner(s)));                   // krátká/dlouhá dvojice – to je to důležité
+  const all=rowsSyl().filter(s=>!opts.has(s));
+  while(opts.size<6&&all.length)opts.add(all.splice(K.rnd(all.length),1)[0]);
+  const st=K.$('#stage');
+  const top=K.el('div','top');
+  const pic=K.el('button','card picture','<span class="emoji">'+W.e+'</span>');top.append(pic);
+  if(S.level==='1')top.append(K.el('p','word',W.w));
+  const slots=K.el('div','slots');W.s.forEach(()=>slots.append(K.el('div','slot')));
+  const tiles=K.el('div','tiles');let pos=0;
+  const mark=()=>[...slots.children].forEach((s,k)=>s.classList.toggle('next',k===pos));
+  K.shuffle([...opts]).forEach((s,k)=>{
+    const b=K.el('button','opt syl',s);b.style.setProperty('--c',COLS[k%COLS.length]);
+    b.onclick=()=>{
+      if(pos>=W.s.length)return;
+      if(s===W.s[pos]){
+        const sl=slots.children[pos];sl.textContent=s;sl.classList.add('full');pos++;mark();
+        if(pos===W.s.length){slots.classList.add('win');K.success(slots);K.say(W.w+'! '+K.pick(K.PRAISE)).then(done)}
+        else K.say(s,0.75);
+      }else{b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');K.say(s+'? Ne, zkus jinou.',0.8)}
+    };
+    tiles.append(b);
+  });
+  mark();
+  pic.onclick=()=>K.say(W.w);
+  st.append(top,slots,tiles);K.hint('Slož slovo ze slabik.');
+  K.repeat=()=>K.say('Slož slovo '+W.w+'.');K.repeat();
+}
+})();
+</script>
+</body>
+</html>

@@ -64,6 +64,8 @@ button:focus-visible{outline:4px solid var(--t4);outline-offset:4px}
 .tip{position:absolute;top:calc(100% + 8px);left:0;white-space:nowrap;background:var(--ink);color:var(--surface);font-size:16px;font-weight:600;padding:4px 12px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s}
 .tipshow .tip{opacity:1}
 
+.hub-back{position:absolute;left:0;top:14px;display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:18px;box-shadow:0 4px 0 var(--line);padding:10px 18px 10px 12px;font-size:20px;font-weight:600;color:var(--ink);text-decoration:none}
+.hub-back svg{width:28px;height:28px}
 /* ---------- Game ---------- */
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 6px}
 .iconbtn{width:58px;height:58px;border-radius:18px;border:0;background:var(--surface);box-shadow:0 4px 0 var(--line);
@@ -183,6 +185,7 @@ input[type=range]{width:200px;accent-color:var(--t2)}
     </button>
     <div class="known" id="known"></div>
     <p class="note" id="voiceNote" hidden>Na tomto zařízení chybí český hlas. Návod najdete v části Pro rodiče.</p>
+    <a class="hub-back" href="../" aria-label="Zpět na všechny aplikace"><svg viewBox="0 0 24 24" fill="none" stroke="#22394A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Aplikace</a>
     <button class="parent-btn hold" id="parentBtn">Pro rodiče (podržet)</button>
   </section>
 

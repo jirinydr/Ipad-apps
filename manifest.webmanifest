@@ -1,0 +1,14 @@
+{
+  "name": "Učíme se",
+  "short_name": "Učíme se",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#E4F1EE",
+  "theme_color": "#E4F1EE",
+  "lang": "cs",
+  "icons": [
+    {"src": "icon-180.png", "sizes": "180x180", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
