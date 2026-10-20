@@ -1,7 +1,7 @@
 // Offline pro rozcestník a všechny nové aplikace (Písmenka mají vlastní service worker).
 // Při připojení se stránky vždy načtou nové (network-first), offline se použije uložená kopie.
 // Po změně souborů zvyš číslo verze.
-const CACHE = 'ucime-se-v8';
+const CACHE = 'ucime-se-v9';
 const APPS = ['prvni-pismeno', 'poslouchej', 'spojovacka', 'skladani-slov', 'slabiky', 'rodice',
   'cisla-tukni', 'najdi-cislo', 'spocitej', 'obtahuj-cisla', 'kde-je-vic', 'serad-cisla', 'scitani'];
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png',
