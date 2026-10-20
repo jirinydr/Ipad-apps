@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Najdi číslo</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<link rel="stylesheet" href="../shared/cisla.css">
+<style>
+.ear{width:clamp(90px,14vmin,140px);aspect-ratio:1;border-radius:50%;border:0;background:var(--sun);box-shadow:0 7px 0 var(--sun-deep);display:grid;place-items:center}
+.ear svg{width:55%;height:55%}
+.ear:active{transform:translateY(5px);box-shadow:0 2px 0 var(--sun-deep)}
+.ear.talking svg{animation:wave 1s ease-in-out infinite}
+.new{font-family:var(--font-letter);font-weight:700;font-size:clamp(22px,3.4vmin,30px);color:var(--ok);margin:0}
+</style>
+</head>
+<body>
+<script src="../shared/common.js"></script>
+<script src="../shared/cisla.js"></script>
+<script>
+(function(){
+"use strict";
+/* Pořadí, ve kterém přibývají nová čísla (jako písmena v Písmenkách). */
+const ORDER=[1,2,3,4,5,0,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20];
+const S=K.store('najdi-cislo-v1',{unlocked:3,choices:4,st:{}});
+K.shell({
+  title:'Najdi číslo',
+  controls:`${C.rangeHTML()}<p class="seg-label">Čísel na výběr</p>${K.segHTML('chSeg',[['3','3'],['4','4'],['6','6'],['8','8']])}
+    <p class="note" id="inGame"></p>`,
+  onPlay:play
+});
+C.bindRange(info);K.bindSeg('chSeg',()=>S.choices,v=>{S.choices=+v;S.save()});
+function pool(){const all=ORDER.filter(n=>n<=C.max());return all.slice(0,Math.min(all.length,Math.max(2,S.unlocked)))}
+function info(){K.$('#inGame').textContent='Ve hře: '+pool().slice().sort((a,b)=>a-b).join(', ')+'. Další čísla přibývají sama, když se daří.'}
+info();addEventListener('pageshow',info);
+const EAR='<svg viewBox="0 0 24 24" fill="none" stroke="#22394A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="#FFFFFF"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
+const ROUND=8;
+const st=n=>S.st[n]||(S.st[n]={ok:0,bad:0});
+/* Častěji ta čísla, která ještě nejdou. */
+const weight=n=>{const s=st(n),t=s.ok+s.bad;return t<3?4:1+(1-s.ok/t)*4};
+function pickTarget(prev){
+  const p=pool().filter(n=>n!==prev);let sum=p.reduce((a,n)=>a+weight(n),0),r=Math.random()*sum;
+  for(const n of p){r-=weight(n);if(r<=0)return n}return p[0];
+}
+
+let firstOk=0,prev=null;
+function play(){firstOk=0;prev=null;K.round(ROUND,(i,done)=>task(i,done))}
+
+function task(i,done){
+  const n=pickTarget(prev);prev=n;
+  const p=pool();const want=Math.min(S.choices,C.max()+1);
+  /* možnosti: nejdřív čísla ze hry, pak další z rozsahu */
+  const set=new Set([n]);K.shuffle(p.slice()).forEach(x=>{if(set.size<Math.min(want,p.length))set.add(x)});
+  C.options(n,want).forEach(x=>{if(set.size<want)set.add(x)});
+  const opts=K.shuffle([...set]);
+  const stage=K.$('#stage');
+  const ear=K.el('button','ear',EAR);ear.setAttribute('aria-label','Poslechnout znovu');
+  const tiles=K.el('div','tiles');
+  let first=true,locked=false;
+  opts.forEach((x,k)=>{const b=C.tile(x,k);b.onclick=()=>answer(b,x);tiles.append(b)});
+  stage.append(ear,tiles);
+  const ask=()=>{ear.classList.add('talking');return K.say('Najdi číslo '+C.word(n)+'.').then(()=>ear.classList.remove('talking'))};
+  ear.onclick=ask;K.repeat=ask;K.hint('');ask();
+
+  function answer(b,x){
+    if(locked)return;
+    if(x===n){
+      locked=true;b.classList.add('right');K.success(b);K.mark(first,String(n));
+      if(first){st(n).ok++;firstOk++}S.save();
+      K.say(C.word(n)+'! '+K.pick(K.PRAISE)).then(()=>{if(i===ROUND-1)levelUp();done()});
+    }else{
+      if(first){st(n).bad++;S.save()}first=false;K.mark(false,String(n));
+      C.wrong(b);K.say('To je '+C.word(x)+'. Najdi '+C.word(n)+'.');
+    }
+  }
+}
+/* Po povedeném kole přibude další číslo. */
+function levelUp(){
+  const all=ORDER.filter(n=>n<=C.max());
+  if(firstOk>=ROUND-1&&S.unlocked<all.length){
+    S.unlocked=Math.max(S.unlocked,pool().length)+1;S.save();
+    const nw=pool()[pool().length-1];
+    setTimeout(()=>{const e=K.$('#end');let p=e.querySelector('.new');if(!p){p=K.el('p','new');e.querySelector('.end-title').after(p)}
+      p.textContent='Nové číslo: '+nw;K.say('Nové číslo: '+C.word(nw)+'!')},2600);
+  }else{const p=K.$('#end .new');if(p)p.remove()}
+  info();
+}
+})();
+</script>
+</body>
+</html>

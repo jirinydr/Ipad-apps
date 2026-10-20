@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Spočítej</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<link rel="stylesheet" href="../shared/cisla.css">
+<style>
+.stage{justify-content:space-evenly}
+/* Košík */
+.cart{display:flex;align-items:center;justify-content:center;gap:clamp(14px,4vw,48px);width:100%;flex-wrap:wrap}
+.goal{display:flex;flex-direction:column;align-items:center;gap:4px}
+.goal .digit{font-size:clamp(90px,min(18vw,17vh),170px);color:var(--t3)}
+.basket{position:relative;width:clamp(240px,min(46vw,36vh),420px);min-height:clamp(150px,22vh,230px);border-radius:36px 36px 70px 70px;
+  background:#F7E3C0;border:6px solid #D9A55B;box-shadow:0 8px 0 #B98337;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;
+  gap:6px;padding:40px 14px 22px}
+.basket.over{background:#FFF0D6;transform:scale(1.03)}
+.basket .thing{--s:clamp(48px,min(9vw,7.5vh),78px)}
+.basket::before{content:"🧺";position:absolute;left:50%;top:-.6em;transform:translateX(-50%);font-family:var(--font-emoji);font-size:clamp(40px,6vh,60px)}
+.done-btn{display:flex;align-items:center;gap:10px}
+.done-btn svg{width:1.1em;height:1.1em}
+</style>
+</head>
+<body>
+<script src="../shared/common.js"></script>
+<script src="../shared/cisla.js"></script>
+<script>
+(function(){
+"use strict";
+const S=K.store('spocitej-v1',{mode:'mix'});
+K.shell({
+  title:'Spočítej',
+  controls:`${C.rangeHTML()}<p class="seg-label">Hra</p>${K.segHTML('modeSeg',[['count','Kolik jich je?'],['cart','Dej do košíku'],['mix','Střídat']])}
+    <p class="note">Ťukej na obrázky a počítej nahlas. V košíku přetáhni (nebo ťukni) tolik obrázků, kolik ukazuje číslo.</p>`,
+  onPlay:play
+});
+C.bindRange();K.bindSeg('modeSeg',()=>S.mode,v=>{S.mode=v;S.save()});
+const ROUND=6;
+const top=()=>Math.min(C.max(),12);          // víc než 12 obrázků se na obrazovku nevejde
+function play(){let last=0;K.round(ROUND,(i,done)=>{
+  const m=S.mode==='mix'?(i%2?'cart':'count'):S.mode;
+  let n;do{n=1+K.rnd(top())}while(n===last&&top()>1);last=n;
+  (m==='cart'?cart:count)(n,done);
+})}
+
+/* ---------- Kolik jich je? ---------- */
+function count(n,done){
+  const T=C.thing();const stage=K.$('#stage');
+  const field=K.el('div','field');let c=0;
+  for(let k=0;k<n;k++){
+    const b=K.el('button','thing','<span class="emoji">'+T.e+'</span>');
+    b.onclick=()=>{if(b.classList.contains('counted')||locked)return;c++;b.classList.add('counted');b.append(K.el('b','',String(c)));K.say(C.word(c),1)};
+    field.append(b);
+  }
+  const tiles=K.el('div','tiles');let first=true,locked=false;
+  C.options(n,3,1,Math.max(top(),3)).forEach((x,k)=>{const b=C.tile(x,k);b.onclick=()=>{
+    if(locked)return;
+    if(x===n){locked=true;b.classList.add('right');K.success(b);K.mark(first,String(n));
+      K.say('Ano, '+C.word(n)+'! '+K.pick(K.PRAISE)).then(done)}
+    else{first=false;K.mark(false,String(n));C.wrong(b);K.say('Ještě jednou. Ťukej na obrázky a počítej.');
+      field.querySelectorAll('.counted').forEach(t=>{t.classList.remove('counted');t.querySelector('b')?.remove()});c=0}
+  };tiles.append(b)});
+  stage.append(field,tiles);
+  const ask=()=>K.say('Kolik je tu '+T.gen+'?');K.repeat=ask;K.hint('Kolik je tu '+T.gen+'?');ask();
+}
+
+/* ---------- Dej do košíku ---------- */
+const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="#22394A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg>';
+function cart(n,done){
+  const T=C.thing();const stage=K.$('#stage');
+  const extra=Math.min(3,13-n);const total=Math.min(12,n+1+K.rnd(extra));
+  const row=K.el('div','cart');
+  const goal=K.el('div','goal');goal.innerHTML=`<p class="digit">${n}</p>`;
+  const basket=K.el('div','basket');basket.setAttribute('aria-label','Košík');
+  row.append(goal,basket);
+  const field=K.el('div','field');
+  for(let k=0;k<total;k++){const b=K.el('button','thing','<span class="emoji">'+T.e+'</span>');field.append(b);drag(b)}
+  const ok=K.el('button','bigbtn done-btn',CHECK+'Hotovo');
+  stage.append(row,field,ok);
+  let first=true,locked=false;
+  const inB=()=>basket.querySelectorAll('.thing').length;
+  const move=b=>{if(locked)return;(b.parentNode===basket?field:basket).append(b);if(b.parentNode===basket)K.say(C.word(inB()),1)};
+  ok.onclick=()=>{
+    if(locked)return;const c=inB();
+    if(c===n){locked=true;K.success(basket);K.mark(first,String(n));K.say(C.word(n)+'! '+K.pick(K.PRAISE)).then(done)}
+    else{first=false;K.mark(false,String(n));C.wrong(basket);
+      K.say('V košíku je '+C.word(c)+'. Potřebujeme '+C.word(n)+'.')}
+  };
+  const ask=()=>K.say('Dej do košíku '+C.word(n)+'.');K.repeat=ask;K.hint('Dej do košíku tolik, kolik ukazuje číslo.');ask();
+
+  /* Přetažení prstem; krátké ťuknutí = přesun do/z košíku */
+  function drag(b){
+    let sx=0,sy=0,moved=false,id=null;
+    b.addEventListener('pointerdown',e=>{if(locked)return;e.preventDefault();id=e.pointerId;try{b.setPointerCapture(id)}catch(_){}sx=e.clientX;sy=e.clientY;moved=false});
+    b.addEventListener('pointermove',e=>{if(e.pointerId!==id)return;const dx=e.clientX-sx,dy=e.clientY-sy;
+      if(!moved&&Math.hypot(dx,dy)<10)return;moved=true;b.classList.add('dragging');b.style.transform=`translate(${dx}px,${dy}px) scale(1.1)`;
+      const r=basket.getBoundingClientRect();basket.classList.toggle('over',e.clientX>r.left&&e.clientX<r.right&&e.clientY>r.top&&e.clientY<r.bottom)});
+    const end=e=>{if(e.pointerId!==id)return;id=null;b.classList.remove('dragging');b.style.transform='';basket.classList.remove('over');
+      if(!moved){move(b);return}
+      const r=basket.getBoundingClientRect();const over=e.clientX>r.left&&e.clientX<r.right&&e.clientY>r.top&&e.clientY<r.bottom;
+      if(over!==(b.parentNode===basket))move(b)};
+    b.addEventListener('pointerup',end);b.addEventListener('pointercancel',e=>{if(e.pointerId!==id)return;id=null;b.classList.remove('dragging');b.style.transform='';basket.classList.remove('over')});
+  }
+}
+})();
+</script>
+</body>
+</html>

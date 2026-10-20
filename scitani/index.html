@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Sčítáme</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<link rel="stylesheet" href="../shared/cisla.css">
+<style>
+.sum{display:flex;align-items:center;justify-content:center;gap:clamp(8px,2vw,22px);flex-wrap:wrap;max-width:100%}
+.grp{background:var(--surface);border-radius:30px;box-shadow:0 7px 0 var(--line);padding:clamp(10px,1.6vw,18px);display:flex;flex-direction:column;align-items:center;gap:8px}
+.grp .field{max-width:clamp(150px,30vw,330px)}
+.grp .thing{--s:clamp(50px,min(9vw,8vh),84px);box-shadow:none;background:var(--bg)}
+.grp .thing.counted{background:var(--ok-soft);box-shadow:none}
+.grp .digit{font-size:clamp(40px,6vh,64px)}
+.sign{font-family:var(--font-letter);font-weight:700;font-size:clamp(50px,9vmin,90px);color:var(--muted);line-height:1}
+.res{width:clamp(80px,min(15vw,14vh),140px);aspect-ratio:1;border-radius:26px;border:5px dashed var(--sun);display:grid;place-items:center;
+  font-family:var(--font-letter);font-weight:700;font-size:clamp(56px,10vmin,96px);color:var(--sun-deep)}
+.res.filled{border:0;background:var(--ok-soft);color:var(--ink);box-shadow:0 7px 0 var(--ok);animation:pop .4s ease}
+</style>
+</head>
+<body>
+<script src="../shared/common.js"></script>
+<script src="../shared/cisla.js"></script>
+<script>
+(function(){
+"use strict";
+const S=K.store('scitani-v1',{upTo:5,digits:true});
+K.shell({
+  title:'Sčítáme',
+  controls:`<p class="seg-label">Výsledek</p>${K.segHTML('upSeg',[['5','do 5'],['10','do 10']])}
+    <p class="seg-label">Pod obrázky</p>${K.segHTML('digSeg',[['true','i číslo'],['false','jen obrázky']])}
+    <p class="note">Spočítej obrázky v obou skupinách dohromady. Ťukej na ně a počítej nahlas.</p>`,
+  onPlay:play
+});
+K.bindSeg('upSeg',()=>S.upTo,v=>{S.upTo=+v;S.save()});K.bindSeg('digSeg',()=>String(S.digits),v=>{S.digits=v==='true';S.save()});
+const ROUND=6;
+function play(){K.round(ROUND,(i,done)=>task(done))}
+
+function task(done){
+  const up=S.upTo||5;const sum=2+K.rnd(up-1);const a=1+K.rnd(sum-1),b=sum-a;
+  const T=C.thing();const stage=K.$('#stage');
+  const row=K.el('div','sum');let c=0,locked=false,first=true;
+  const grp=n=>{const g=K.el('div','grp');const f=K.el('div','field');
+    for(let k=0;k<n;k++){const t=K.el('button','thing','<span class="emoji">'+T.e+'</span>');
+      t.onclick=()=>{if(locked||t.classList.contains('counted'))return;c++;t.classList.add('counted');t.append(K.el('b','',String(c)));K.say(C.word(c),1)};f.append(t)}
+    g.append(f);if(S.digits)g.append(K.el('p','digit',String(n)));return g};
+  const res=K.el('div','res','?');
+  row.append(grp(a),K.el('span','sign','+'),grp(b),K.el('span','sign','='),res);
+  const tiles=K.el('div','tiles');
+  C.options(sum,3,1,up).forEach((x,k)=>{const t=C.tile(x,k);t.onclick=()=>{
+    if(locked)return;
+    if(x===sum){locked=true;t.classList.add('right');res.textContent=sum;res.classList.add('filled');K.success(res);K.mark(first,a+'+'+b);
+      K.say(C.word(a)+' plus '+C.word(b)+' je '+C.word(sum)+'. '+K.pick(K.PRAISE)).then(done)}
+    else{first=false;K.mark(false,a+'+'+b);C.wrong(t);K.say('Ještě jednou. Spočítej všechny obrázky.');
+      row.querySelectorAll('.counted').forEach(e=>{e.classList.remove('counted');e.querySelector('b')?.remove()});c=0}
+  };tiles.append(t)});
+  stage.append(row,tiles);
+  const ask=()=>K.say('Kolik je '+C.word(a)+' plus '+C.word(b)+'?');K.repeat=ask;K.hint('Kolik je to dohromady?');ask();
+}
+})();
+</script>
+</body>
+</html>

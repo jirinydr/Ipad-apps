@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Kde je víc?</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<link rel="stylesheet" href="../shared/cisla.css">
+<style>
+.pair{display:flex;gap:clamp(18px,5vw,64px);justify-content:center;align-items:stretch;flex-wrap:wrap}
+.side{border:0;border-radius:36px;background:var(--surface);box-shadow:0 8px 0 var(--line);padding:clamp(14px,2.4vw,26px);
+  display:grid;place-items:center;min-width:clamp(160px,34vw,330px);min-height:clamp(160px,30vh,320px);transition:transform .1s}
+.side:active{transform:translateY(5px);box-shadow:0 3px 0 var(--line)}
+.side .qty{--qs:clamp(130px,min(28vw,26vh),250px)}
+.side .dice.card{box-shadow:none;background:var(--bg)}
+.side .digit{font-size:clamp(110px,min(24vw,22vh),220px)}
+.side.right{background:var(--ok-soft);box-shadow:0 0 0 7px var(--ok),0 8px 0 var(--ok);animation:pop .5s ease}
+.side.wrong{animation:shake .4s ease}
+.ask{font-weight:800;font-size:clamp(34px,6vmin,60px);margin:0;line-height:1}
+</style>
+</head>
+<body>
+<script src="../shared/common.js"></script>
+<script src="../shared/cisla.js"></script>
+<script>
+(function(){
+"use strict";
+const S=K.store('kde-je-vic-v1',{kind:'objects',ask:'more'});
+K.shell({
+  title:'Kde je víc?',
+  controls:`${C.rangeHTML()}<p class="seg-label">Co se porovnává</p>${K.segHTML('kindSeg',[['objects','Obrázky'],['dots','Tečky'],['num','Čísla'],['mix','Střídat']])}
+    <p class="seg-label">Otázka</p>${K.segHTML('askSeg',[['more','Kde je víc?'],['both','Víc i méně']])}`,
+  onPlay:play
+});
+C.bindRange();K.bindSeg('kindSeg',()=>S.kind,v=>{S.kind=v;S.save()});K.bindSeg('askSeg',()=>S.ask,v=>{S.ask=v;S.save()});
+const ROUND=8;
+function play(){K.round(ROUND,(i,done)=>task(done))}
+
+function task(done){
+  const kind=S.kind==='mix'?K.pick(['objects','dots','num']):S.kind;
+  const hi=kind==='num'?C.max():Math.min(C.max(),kind==='objects'?12:20);
+  let a,b;do{a=1+K.rnd(hi);b=1+K.rnd(hi)}while(a===b);
+  const more=S.ask==='more'||Math.random()<.5;
+  const goal=more?Math.max(a,b):Math.min(a,b);
+  const q=more?'Kde je víc?':'Kde je méně?';
+  const stage=K.$('#stage');
+  const askEl=K.el('p','ask',q);
+  const pair=K.el('div','pair');
+  const T=C.thing();
+  let first=true,locked=false;
+  [a,b].forEach((n,k)=>{
+    const s=K.el('button','side');s.setAttribute('aria-label',C.word(n));
+    if(kind==='num'){const d=K.el('p','digit',String(n));d.style.color=C.COLORS[k?3:0];s.append(d)}
+    else s.append(C.quantity(n,kind,T.e,C.COLORS[k?3:0]));
+    s.onclick=()=>{
+      if(locked)return;
+      if(n===goal){locked=true;s.classList.add('right');K.success(s);K.mark(first,a+' : '+b);
+        const other=n===a?b:a;
+        K.say(C.word(n)+' je '+(more?'víc':'méně')+' než '+C.word(other)+'. '+K.pick(K.PRAISE)).then(done)}
+      else{first=false;K.mark(false,a+' : '+b);C.wrong(s);K.say('Tady je '+C.word(n)+'. Zkus to druhé.')}
+    };
+    pair.append(s);
+  });
+  stage.append(askEl,pair);
+  K.repeat=()=>K.say(q);K.hint('');K.say(q);
+}
+})();
+</script>
+</body>
+</html>

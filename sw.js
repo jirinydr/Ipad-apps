@@ -1,10 +1,11 @@
 // Offline pro rozcestník a všechny nové aplikace (Písmenka mají vlastní service worker).
 // Při připojení se stránky vždy načtou nové (network-first), offline se použije uložená kopie.
 // Po změně souborů zvyš číslo verze.
-const CACHE = 'ucime-se-v7';
-const APPS = ['prvni-pismeno', 'poslouchej', 'spojovacka', 'skladani-slov', 'slabiky', 'rodice'];
+const CACHE = 'ucime-se-v8';
+const APPS = ['prvni-pismeno', 'poslouchej', 'spojovacka', 'skladani-slov', 'slabiky', 'rodice',
+  'cisla-tukni', 'najdi-cislo', 'spocitej', 'obtahuj-cisla', 'kde-je-vic', 'serad-cisla', 'scitani'];
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-512.png',
-  './shared/common.css', './shared/common.js', './shared/psaci.ttf',
+  './shared/common.css', './shared/common.js', './shared/psaci.ttf', './shared/cisla.js', './shared/cisla.css',
   ...APPS.flatMap(a => ['./' + a + '/', './' + a + '/index.html'])];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE.map(u => new Request(u, {cache: 'reload'})))));

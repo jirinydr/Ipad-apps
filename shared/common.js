@@ -19,6 +19,8 @@ K.store = (key,def) => {
 
 /* ---------- Společné nastavení a statistiky (stránka Pro rodiče) ---------- */
 K.G = K.store('ucime-se-global',{rate:1,hidden:[]});
+/* Sčítání je zpočátku na rozcestníku skryté (zapíná se v Pro rodiče). */
+if(!K.G.d2){K.G.d2=1;if(!K.G.hidden.includes('scitani'))K.G.hidden.push('scitani');K.G.save()}
 const STATS='ucime-se-stats';
 K.app = location.pathname.split('/').filter(p=>p&&p!=='index.html').pop()||'';
 function statsEdit(fn){try{const all=JSON.parse(localStorage.getItem(STATS))||{};

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Ťukni na číslo</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<link rel="stylesheet" href="../shared/cisla.css">
+<style>
+.view{display:flex;align-items:center;justify-content:center;gap:clamp(18px,5vw,60px);min-height:calc(clamp(130px,min(30vw,26vh),260px) + 20px)}
+.view .digit{font-size:clamp(120px,min(26vw,24vh),240px);min-width:1.1ch;text-align:center}
+.view .qbtn{border:0;background:transparent;padding:0;border-radius:24px}
+.view .qbtn:active{transform:scale(.97)}
+.view.empty .digit{color:var(--line)}
+.pick{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(8px,1.6vw,18px);max-width:min(100%,980px)}
+.pick .opt.on{background:var(--sun);box-shadow:0 8px 0 var(--sun-deep)}
+.tipline{font-family:var(--font-letter);color:var(--muted);font-size:clamp(15px,2.2vmin,19px);margin:0;text-align:center}
+</style>
+</head>
+<body>
+<script src="../shared/common.js"></script>
+<script src="../shared/cisla.js"></script>
+<script>
+(function(){
+"use strict";
+K.shell({
+  title:'Ťukni na číslo',
+  controls:`${C.rangeHTML()}<p class="note">Ťukni na číslo a uslyšíš, jak se jmenuje. Pak ťukni na tečky a spočítáme je spolu.</p>`,
+  onPlay:play
+});
+C.bindRange();
+
+let cur=null, kind='dots';
+function play(){
+  K.show('game');K.$('#dots').innerHTML='';K.hint('Ťukni na číslo.');
+  const st=K.$('#stage');st.innerHTML='';
+  const view=K.el('div','view empty');
+  const tip=K.el('p','tipline','');
+  const pick=K.el('div','pick');
+  const nums=C.range(0);
+  const ts=C.tileSize(nums.length);
+  nums.forEach((n,k)=>{const b=C.tile(n,k);if(ts)b.style.setProperty('--tile',ts);b.onclick=()=>open(n,b);pick.append(b)});
+  view.innerHTML='<p class="digit">?</p>';
+  st.append(view,tip,pick);
+  K.repeat=()=>cur==null?K.say('Ťukni na číslo.'):K.say(C.word(cur));
+
+  function open(n,b){
+    C.stopCount();K.stopSay();
+    pick.querySelectorAll('.on').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    if(cur===n)kind=kind==='dots'?'objects':'dots';            // další ťuknutí na stejné číslo = jiný obrázek
+    cur=n;view.classList.remove('empty');view.innerHTML='';
+    const d=K.el('p','digit',String(n));d.style.color=C.COLORS[n%4];
+    const q=C.quantity(n,n>12?'dots':kind,null,C.COLORS[n%4]);
+    const qb=K.el('button','qbtn');qb.setAttribute('aria-label','Spočítat');qb.append(q);
+    qb.onclick=()=>{if(n>0){K.mark(true,String(n));C.countAlong(q).then(()=>K.say(C.word(n)+'!'))}};
+    view.append(d,qb);
+    tip.textContent=n>0?'Ťukni na obrázek a spočítáme to spolu.':'';
+    K.say(C.word(n));K.burstEl(d,14);
+  }
+}
+})();
+</script>
+</body>
+</html>

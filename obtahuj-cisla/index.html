@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Obtahuj čísla</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<link rel="stylesheet" href="../shared/cisla.css">
+<style>
+.stage{padding-bottom:8px}
+.trace-stage{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;gap:clamp(12px,3vw,40px)}
+.trace-wrap{position:relative;background:var(--surface);border-radius:40px;box-shadow:0 8px 0 var(--line);flex:none}
+.trace-wrap canvas{position:absolute;inset:0;touch-action:none}
+.side{display:flex;flex-direction:column;align-items:center;gap:12px}
+.pill{border:0;border-radius:20px;background:var(--surface);box-shadow:0 5px 0 var(--line);padding:10px 22px;font-size:22px;font-weight:600;display:flex;align-items:center;gap:10px}
+.pill svg{width:26px;height:26px}
+.pill:active{transform:translateY(4px);box-shadow:0 1px 0 var(--line)}
+@media (orientation:portrait){.trace-stage{flex-direction:column}}
+</style>
+</head>
+<body>
+<script src="../shared/common.js"></script>
+<script src="../shared/cisla.js"></script>
+<script>
+(function(){
+"use strict";
+const S=K.store('obtahuj-cisla-v1',{order:'seq',next:0});
+K.shell({
+  title:'Obtahuj čísla',
+  controls:`${C.rangeHTML()}${K.segHTML('ordSeg',[['seq','Popořadě'],['rnd','Náhodně']])}
+    <p class="note">Začni u zeleného puntíku a jeď prstem po čáře. Šipka ukazuje směr.</p>`,
+  onPlay:play
+});
+C.bindRange();K.bindSeg('ordSeg',()=>S.order,v=>{S.order=v;S.save()});
+const ROUND=5;
+
+/* Tahy číslic v poli 100×105 (stejný systém jako u písmen v Písmenkách). */
+const Ln=(x1,y1,x2,y2)=>({t:'L',a:[x1,y1,x2,y2]});
+const Ar=(cx,cy,rx,ry,d0,d1)=>({t:'A',a:[cx,cy,rx,ry,d0,d1]});
+const STROKES={
+ 0:[[Ar(50,50,24,35,-90,-450)]],
+ 1:[[Ln(34,32,56,15),Ln(56,15,56,85)]],
+ 2:[[Ar(50,35,20,20,-160,35),Ln(66.4,46.5,28,85),Ln(28,85,72,85)]],
+ 3:[[Ar(48,32,19,17,-150,90),Ar(48,67,22,18,-90,150)]],
+ 4:[[Ln(54,15,24,62),Ln(24,62,76,62)],[Ln(62,30,62,85)]],
+ 5:[[Ln(36,15,34,49),Ar(50,63,21,21,-140,140)],[Ln(36,15,68,15)]],
+ 6:[[Ar(64,65,34,49,-94,-180),Ar(50,65,20,20,180,-180)]],
+ 7:[[Ln(28,15,72,15),Ln(72,15,40,85)]],
+ 8:[[Ar(50,32,18,17,-10,-270),Ar(50,67,21,18,-90,270),Ar(50,32,18,17,90,-10)]],
+ 9:[[Ar(50,35,20,20,0,-360),Ln(70,35,70,85)]]
+};
+function strokePoints(segs){
+  const raw=[];
+  for(const s of segs){
+    if(s.t==='L'){const[x1,y1,x2,y2]=s.a,n=Math.max(2,Math.ceil(Math.hypot(x2-x1,y2-y1)/1.5));for(let i=0;i<=n;i++)raw.push([x1+(x2-x1)*i/n,y1+(y2-y1)*i/n])}
+    else{const[cx,cy,rx,ry,d0,d1]=s.a,n=Math.max(8,Math.ceil(Math.abs(d1-d0)/4));for(let i=0;i<=n;i++){const d=(d0+(d1-d0)*i/n)*Math.PI/180;raw.push([cx+rx*Math.cos(d),cy+ry*Math.sin(d)])}}
+  }
+  const out=[raw[0]];let acc=0;
+  for(let i=1;i<raw.length;i++){const d=Math.hypot(raw[i][0]-raw[i-1][0],raw[i][1]-raw[i-1][1]);acc+=d;if(acc>=3){out.push(raw[i]);acc=0}}
+  const last=raw[raw.length-1],pl=out[out.length-1];if(pl[0]!==last[0]||pl[1]!==last[1])out.push(last);
+  return out;
+}
+const dpr=Math.min(window.devicePixelRatio||1,2);
+const CLEAR='<svg viewBox="0 0 24 24" fill="none" stroke="#22394A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>';
+
+function digits(){const top=Math.min(9,C.max());const a=[];for(let d=0;d<=top;d++)a.push(d);return a}
+function play(){
+  const ds=digits();let list;
+  if(S.order==='seq'){list=[];let s=(S.next||0)%ds.length;for(let k=0;k<ROUND;k++)list.push(ds[(s+k)%ds.length]);S.next=(s+ROUND)%ds.length;S.save()}
+  else{list=[];let prev=-1;for(let k=0;k<ROUND;k++){let d;do{d=K.pick(ds)}while(d===prev&&ds.length>1);list.push(d);prev=d}}
+  K.round(ROUND,(i,done)=>task(list[i],done));
+}
+
+let T=null;
+function task(dg,done){
+  const stage=K.$('#stage');
+  const ts=K.el('div','trace-stage');
+  const wrap=K.el('div','trace-wrap','<canvas class="cg"></canvas><canvas class="cd"></canvas>');
+  const side=K.el('div','side');
+  const q=C.quantity(dg,'dots',null,C.COLORS[dg%4]);q.style.setProperty('--qs','clamp(90px,min(18vw,16vh),170px)');
+  const clr=K.el('button','pill',CLEAR+'Znovu');
+  side.append(q,clr);ts.append(wrap,side);stage.append(ts);
+  const ask=()=>K.say('Obtáhni číslo '+C.word(dg)+'.');K.repeat=ask;K.hint('Obtáhni číslo '+dg+'.');ask();
+  requestAnimationFrame(()=>setup(dg,ts,wrap,side,done));
+  clr.onclick=()=>{if(!T||T.done)return;T.si=0;T.pi=0;T.finger=null;ask()};
+}
+function setup(dg,ts,wrap,side,done){
+  const box=ts.getBoundingClientRect(),sb=side.getBoundingClientRect();
+  const portrait=matchMedia('(orientation:portrait)').matches;
+  const w=portrait?box.width:box.width-sb.width-40, h=portrait?box.height-sb.height-20:box.height;
+  const size=Math.floor(Math.max(180,Math.min(w,h,620)));
+  wrap.style.width=size+'px';wrap.style.height=size+'px';
+  const g=wrap.querySelector('.cg'),d=wrap.querySelector('.cd');
+  [g,d].forEach(c=>{c.width=size*dpr;c.height=size*dpr;c.style.width=size+'px';c.style.height=size+'px'});
+  const sc=size/110,ox=(size-100*sc)/2,oy=(size-105*sc)/2;
+  if(T&&T.raf)cancelAnimationFrame(T.raf);
+  T={dg,size,sc,ox,oy,strokes:STROKES[dg].map(strokePoints),si:0,pi:0,finger:null,done:false,d,gc:g.getContext('2d'),dc:d.getContext('2d'),raf:0,t0:performance.now(),wrap,fin:done};
+  drawGuide();
+  const toBox=e=>{const b=d.getBoundingClientRect();return[(e.clientX-b.left-ox)/sc,(e.clientY-b.top-oy)/sc]};
+  d.onpointerdown=e=>{if(T.done)return;try{d.setPointerCapture(e.pointerId)}catch(_){}T.finger=toBox(e);advance()};
+  d.onpointermove=e=>{if(!T.finger||T.done)return;T.finger=toBox(e);advance()};
+  d.onpointerup=d.onpointercancel=()=>{T.finger=null};
+  loop();
+}
+const P=p=>[T.ox+p[0]*T.sc,T.oy+p[1]*T.sc];
+function pathOf(c,pts,upto){c.beginPath();const a=P(pts[0]);c.moveTo(a[0],a[1]);for(let i=1;i<upto;i++){const b=P(pts[i]);c.lineTo(b[0],b[1])}}
+function drawGuide(){
+  const c=T.gc;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,T.size,T.size);
+  c.lineCap='round';c.lineJoin='round';c.strokeStyle='#D3E5E1';c.lineWidth=14*T.sc;
+  T.strokes.forEach(pts=>{pathOf(c,pts,pts.length);c.stroke()});
+  c.setLineDash([2*T.sc,5*T.sc]);c.strokeStyle='#9DBDB6';c.lineWidth=1.6*T.sc;
+  T.strokes.forEach(pts=>{pathOf(c,pts,pts.length);c.stroke()});
+  c.setLineDash([]);
+}
+function advance(){
+  if(T.done)return;
+  const f=T.finger;let moved=true;
+  while(moved&&!T.done){
+    moved=false;const pts=T.strokes[T.si];
+    const look=Math.min(pts.length-1,T.pi+4);
+    for(let j=T.pi;j<=look;j++){if(Math.hypot(f[0]-pts[j][0],f[1]-pts[j][1])<9){T.pi=j+1;moved=true;break}}
+    if(T.pi>=pts.length){
+      T.si++;T.pi=0;T.finger=null;
+      if(T.si>=T.strokes.length){finish();return}
+      K.burstEl(T.wrap,12);break;
+    }
+  }
+}
+function loop(){
+  if(!T||!T.d.isConnected)return;
+  const c=T.dc;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,T.size,T.size);
+  c.lineCap='round';c.lineJoin='round';
+  T.strokes.forEach((pts,k)=>{
+    const upto=k<T.si?pts.length:k===T.si?T.pi:0;if(upto<1)return;
+    c.strokeStyle='#F5B53F';c.lineWidth=12*T.sc;pathOf(c,pts,Math.max(2,upto));c.stroke();
+  });
+  if(!T.done){
+    const pts=T.strokes[T.si],cur=P(pts[Math.min(T.pi,pts.length-1)]);
+    c.font='700 '+Math.round(9*T.sc)+'px Andika, sans-serif';c.textAlign='center';c.textBaseline='middle';
+    for(let k=T.si+1;k<T.strokes.length;k++){const s=P(T.strokes[k][0]);c.fillStyle='#8C7AE6';c.beginPath();c.arc(s[0],s[1],6*T.sc,0,7);c.fill();c.fillStyle='#FFFFFF';c.fillText(String(k+1),s[0],s[1]+.5)}
+    const ah=pts[Math.min(T.pi+5,pts.length-1)],bh=pts[Math.min(T.pi+9,pts.length-1)];
+    if(ah!==bh){const A=P(ah),B=P(bh),an=Math.atan2(B[1]-A[1],B[0]-A[0]);
+      c.save();c.translate(B[0],B[1]);c.rotate(an);c.fillStyle='#2FA463';c.beginPath();c.moveTo(6*T.sc,0);c.lineTo(-3*T.sc,-5*T.sc);c.lineTo(-3*T.sc,5*T.sc);c.closePath();c.fill();c.restore()}
+    const pulse=1+.18*Math.sin((performance.now()-T.t0)/180);
+    c.fillStyle='rgba(47,164,99,.25)';c.beginPath();c.arc(cur[0],cur[1],11*T.sc*pulse,0,7);c.fill();
+    c.fillStyle='#2FA463';c.beginPath();c.arc(cur[0],cur[1],6.5*T.sc,0,7);c.fill();
+    if(T.pi===0&&T.strokes.length>1){c.fillStyle='#FFFFFF';c.fillText(String(T.si+1),cur[0],cur[1]+.5)}
+  }
+  if(T.finger){const f=P(T.finger);c.fillStyle='rgba(34,57,74,.25)';c.beginPath();c.arc(f[0],f[1],5*T.sc,0,7);c.fill()}
+  T.raf=requestAnimationFrame(loop);
+}
+function finish(){
+  T.done=true;K.mark(true,String(T.dg));K.burstEl(T.wrap,70);
+  const fin=T.fin;K.say(C.word(T.dg)+'! '+K.pick(K.PRAISE)).then(()=>fin());
+}
+})();
+</script>
+</body>
+</html>

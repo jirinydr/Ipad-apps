@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E4F1EE">
+<title>Seřaď čísla</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<link rel="stylesheet" href="../shared/cisla.css">
+<style>
+.train{--w:clamp(58px,min(13vw,12vh),130px);display:flex;align-items:flex-end;gap:6px;max-width:100%;margin-bottom:30px}
+.train>*{flex:none}
+.loco{font-family:var(--font-emoji);font-size:calc(var(--w)*1.15);line-height:.9;transform:scaleX(-1)}
+.wagon{width:var(--w);aspect-ratio:1;border-radius:18px 18px 10px 10px;border:4px dashed var(--line);display:grid;place-items:center;
+  font-family:var(--font-letter);font-weight:700;font-size:calc(var(--w)*.58);position:relative;background:transparent}
+.wagon::after{content:"";position:absolute;bottom:-16px;left:14%;right:14%;height:16px;
+  background:radial-gradient(circle at 20% 50%,var(--ink) 7px,transparent 8px),radial-gradient(circle at 80% 50%,var(--ink) 7px,transparent 8px)}
+.wagon.full{border:0;background:var(--surface);box-shadow:0 6px 0 var(--c);animation:pop .4s ease}
+.wagon.next{border-color:var(--sun)}
+.seq{--w:clamp(72px,min(15vw,14vh),140px);display:flex;gap:clamp(8px,1.6vw,16px);flex-wrap:wrap;justify-content:center}
+.seq span{width:var(--w);aspect-ratio:1;border-radius:22px;background:var(--surface);box-shadow:0 6px 0 var(--line);display:grid;place-items:center;
+  font-family:var(--font-letter);font-weight:700;font-size:calc(var(--w)*.56)}
+.seq span.gap{background:transparent;box-shadow:none;border:4px dashed var(--sun);color:var(--sun-deep)}
+.seq span.filled{background:var(--ok-soft);box-shadow:0 6px 0 var(--ok);border:0;color:var(--ink);animation:pop .4s ease}
+</style>
+</head>
+<body>
+<script src="../shared/common.js"></script>
+<script src="../shared/cisla.js"></script>
+<script>
+(function(){
+"use strict";
+const S=K.store('serad-cisla-v1',{mode:'mix'});
+K.shell({
+  title:'Seřaď čísla',
+  controls:`${C.rangeHTML()}<p class="seg-label">Hra</p>${K.segHTML('modeSeg',[['train','Vláček'],['gap','Co chybí?'],['mix','Střídat']])}
+    <p class="note">Vláček: ťukej na čísla popořadě a nakládej je do vagónků. Co chybí: najdi číslo, které v řadě chybí.</p>`,
+  onPlay:play
+});
+C.bindRange();K.bindSeg('modeSeg',()=>S.mode,v=>{S.mode=v;S.save()});
+const ROUND=6;
+function play(){K.round(ROUND,(i,done)=>{const m=S.mode==='mix'?(i%2?'gap':'train'):S.mode;(m==='gap'?gap:train)(done)})}
+/* Řada po sobě jdoucích čísel; do 5 vždy 1–5, jinak náhodný úsek. */
+function run(len){const mx=C.max();if(mx<=5)return C.range(1,Math.min(5,mx)).slice(0,len);
+  const s=K.rnd(mx-len+2);return C.range(s,s+len-1)}
+
+function train(done){
+  const nums=run(5);const stage=K.$('#stage');
+  const tr=K.el('div','train');tr.append(K.el('span','loco','🚂'));
+  const wagons=nums.map(()=>{const w=K.el('div','wagon');tr.append(w);return w});
+  const tiles=K.el('div','tiles');let idx=0,first=true;
+  K.shuffle(nums.slice()).forEach((n,k)=>{const b=C.tile(n,k);b.onclick=()=>{
+    if(idx>=nums.length)return;
+    if(n===nums[idx]){
+      const w=wagons[idx];w.textContent=n;w.classList.add('full');w.style.setProperty('--c',b.style.getPropertyValue('--c'));
+      b.classList.add('used');idx++;mark();
+      if(idx===nums.length){K.mark(first,nums.join('–'));K.success(tr);
+        K.say(nums.map(C.word).join(', ')+'. '+K.pick(K.PRAISE)).then(done)}
+      else K.say(C.word(n),1);
+    }else{first=false;K.mark(false,nums.join('–'));C.wrong(b);K.say(idx?'Zkus jiné číslo.':'Které číslo je nejmenší?')}
+  };tiles.append(b)});
+  const mark=()=>wagons.forEach((w,k)=>w.classList.toggle('next',k===idx));mark();
+  stage.append(tr,tiles);
+  const ask=()=>K.say('Nalož čísla do vláčku popořadě. Od nejmenšího.');K.repeat=ask;K.hint('Ťukej na čísla popořadě.');ask();
+}
+
+function gap(done){
+  const nums=run(C.max()<=5?5:5);const hole=K.rnd(nums.length);const want=nums[hole];
+  const stage=K.$('#stage');const seq=K.el('div','seq');
+  nums.forEach((n,k)=>seq.append(K.el('span',k===hole?'gap':'',k===hole?'?':String(n))));
+  const tiles=K.el('div','tiles');let first=true,locked=false;
+  C.options(want,3,0,C.max()).forEach((x,k)=>{const b=C.tile(x,k);b.onclick=()=>{
+    if(locked)return;
+    if(x===want){locked=true;const g=seq.children[hole];g.textContent=x;g.className='filled';b.classList.add('right');K.success(g);K.mark(first,String(want));
+      K.say(nums.map(C.word).join(', ')+'. '+K.pick(K.PRAISE)).then(done)}
+    else{first=false;K.mark(false,String(want));C.wrong(b);K.say('Ještě ne. Zkus si řadu přečíst nahlas.')}
+  };tiles.append(b)});
+  stage.append(seq,tiles);
+  const ask=()=>K.say('Které číslo chybí?');K.repeat=ask;K.hint('Které číslo chybí?');ask();
+}
+})();
+</script>
+</body>
+</html>
